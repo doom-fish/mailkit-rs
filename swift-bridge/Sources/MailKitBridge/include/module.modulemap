@@ -1,0 +1,4 @@
+module MailKitBridge [system] {
+    header "MailKitBridge.h"
+    export *
+}
