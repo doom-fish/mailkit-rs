@@ -5,6 +5,7 @@ use libc::free;
 use serde::{Deserialize, Serialize};
 
 use crate::ffi;
+use crate::message_security_handler::{message_security_error_domain, MessageSecurityErrorCode};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -25,6 +26,15 @@ impl NSErrorInfo {
             domain: domain.into(),
             code,
             localized_description: localized_description.into(),
+        }
+    }
+
+    #[must_use]
+    pub fn message_security_error_code(&self) -> Option<MessageSecurityErrorCode> {
+        if self.domain == message_security_error_domain() {
+            MessageSecurityErrorCode::from_code(self.code)
+        } else {
+            None
         }
     }
 }

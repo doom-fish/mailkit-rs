@@ -69,7 +69,8 @@ pub use manager::ExtensionManager;
 pub use message::{MEMessage, Message, MessageEncryptionState, MessageInfo, MessageState};
 pub use message_action_extension::{MessageActionExtension, MessageActionHandler};
 pub use message_security_handler::{
-    message_security_error_domain, MessageSecurityHandler, MessageSecurityHandlerDelegate,
+    message_security_error_domain, MessageSecurityErrorCode, MessageSecurityHandler,
+    MessageSecurityHandlerDelegate,
 };
 
 /// Common imports.
@@ -109,6 +110,6 @@ pub mod prelude {
     pub use crate::message::{Message, MessageEncryptionState, MessageInfo, MessageState};
     pub use crate::message_action_extension::{MessageActionExtension, MessageActionHandler};
     pub use crate::message_security_handler::{
-        MessageSecurityHandler, MessageSecurityHandlerDelegate,
+        MessageSecurityErrorCode, MessageSecurityHandler, MessageSecurityHandlerDelegate,
     };
 }

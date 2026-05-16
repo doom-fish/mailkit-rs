@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.1] - 2026-05-16
+
+- Added `MessageSecurityErrorCode` plus `NSErrorInfo::message_security_error_code()` for `MEMessageSecurityHandler` failures
+- Closed the final top-level MailKit header audit gap for `MEMessageSecurityErrorCode`
+
 ## [0.2.0] - 2026-05-16
 
 - Added safe snapshot wrappers for `MEMessage`, `MEComposeContext`, and `MEComposeSession`

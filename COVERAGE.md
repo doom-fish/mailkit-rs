@@ -106,7 +106,7 @@ Audited against `/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.pla
 | `MEMessageEncodingResult.h` | `MEMessageEncodingResult.encryptionError` | ✅ implemented | `MessageEncodingResultInfo.encryption_error`. |
 | `MEMessageEncodingResult.h` | `MEMessageEncodingResult.init(encodedMessage:signingError:encryptionError:)` | ✅ implemented | `MessageEncodingResult::new`. |
 | `MEMessageSecurityHandler.h` | `MEMessageSecurityErrorDomain` | ✅ implemented | `message_security_error_domain()`. |
-| `MEMessageSecurityHandler.h` | `MEMessageSecurityErrorCode` | ✅ implemented | surfaced through `NSErrorInfo.code` using the framework error domain. |
+| `MEMessageSecurityHandler.h` | `MEMessageSecurityErrorCode` | ✅ implemented | `MessageSecurityErrorCode` plus `NSErrorInfo::message_security_error_code()`. |
 | `MEMessageSecurityHandler.h` | `MEMessageSecurityHandler.extensionViewController(signers:)` | ✅ implemented | `MessageSecurityHandlerDelegate::extension_view_controller_for_signers`. |
 | `MEMessageSecurityHandler.h` | `MEMessageSecurityHandler.extensionViewController(messageContext:)` | ✅ implemented | `MessageSecurityHandlerDelegate::extension_view_controller_for_message_context`. |
 | `MEMessageSecurityHandler.h` | `MEMessageSecurityHandler.primaryActionClicked(forMessageContext:completionHandler:)` | ✅ implemented | `MessageSecurityHandlerDelegate::primary_action_clicked_for_message_context`. |

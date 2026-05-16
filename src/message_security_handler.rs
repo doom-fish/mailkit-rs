@@ -2,6 +2,8 @@ use core::ffi::{c_char, c_void};
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::ptr;
 
+use serde::{Deserialize, Serialize};
+
 use crate::compose_session_handler::{ComposeContext, ComposeContextInfo};
 use crate::error::{from_swift, take_owned_c_string, MailKitError};
 use crate::extension_view_controller::ExtensionViewController;
@@ -11,6 +13,29 @@ use crate::private::{decode_json_box_ref, encode_json_box, write_error_out};
 use crate::security::{
     DecodedMessage, MessageEncodingResult, MessageSignerInfo, OutgoingMessageEncodingStatus,
 };
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum MessageSecurityErrorCode {
+    EncodingError = 0,
+    DecodingError = 1,
+}
+
+impl MessageSecurityErrorCode {
+    #[must_use]
+    pub const fn as_code(self) -> i64 {
+        self as i64
+    }
+
+    #[must_use]
+    pub const fn from_code(code: i64) -> Option<Self> {
+        match code {
+            0 => Some(Self::EncodingError),
+            1 => Some(Self::DecodingError),
+            _ => None,
+        }
+    }
+}
 
 pub fn message_security_error_domain() -> String {
     take_owned_c_string(unsafe { ffi::core::mail_message_security_error_domain_copy() })

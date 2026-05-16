@@ -1,9 +1,9 @@
 use mailkit::{
     ComposeContext, ComposeContextInfo, ComposeUserAction, DecodedMessageBanner, EmailAddress,
     ExtensionViewController, Message, MessageEncoding, MessageEncodingResult,
-    MessageEncryptionState, MessageInfo, MessageSecurityHandler, MessageSecurityHandlerDelegate,
-    MessageSecurityInformation, MessageSigner, MessageState, OutgoingMessageCapabilities,
-    OutgoingMessageEncodingStatus, RemoteContentBlocking,
+    MessageEncryptionState, MessageInfo, MessageSecurityErrorCode, MessageSecurityHandler,
+    MessageSecurityHandlerDelegate, MessageSecurityInformation, MessageSigner, MessageState,
+    OutgoingMessageCapabilities, OutgoingMessageEncodingStatus, RemoteContentBlocking,
 };
 
 struct ExampleSecurityHandler;
@@ -111,6 +111,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     assert!(status.info().capabilities.can_sign);
     let result = handler.encode_message(&message, &context)?;
     assert!(result.info().encoded_message.is_some());
+    assert_eq!(MessageSecurityErrorCode::EncodingError.as_code(), 0);
+    assert_eq!(MessageSecurityErrorCode::DecodingError.as_code(), 1);
     println!("message-security handler decoded and encoded a MailKit message");
     Ok(())
 }
