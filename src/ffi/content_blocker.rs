@@ -3,6 +3,9 @@ use core::ffi::{c_char, c_void};
 pub type ContentBlockerJsonCallback = extern "C" fn(*mut c_void, *mut *mut c_char) -> *mut c_void;
 pub type ReleaseUserDataCallback = extern "C" fn(*mut c_void);
 
+// Async callback signature
+pub type AsyncContentBlockerCallback = extern "C" fn(*const c_void, *const i8, *mut c_void);
+
 unsafe extern "C" {
     pub fn mail_content_blocker_new(
         content_rules_callback: Option<ContentBlockerJsonCallback>,
@@ -15,4 +18,11 @@ unsafe extern "C" {
         blocker: *mut c_void,
         error_out: *mut *mut c_char,
     ) -> *mut c_void;
+
+    // Async API
+    pub fn mail_content_blocker_content_rules_async(
+        blocker: *mut c_void,
+        cb: AsyncContentBlockerCallback,
+        ctx: *mut c_void,
+    );
 }

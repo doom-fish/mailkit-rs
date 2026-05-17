@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] - 2026-05-17
+
+- Added `async_api` module (Tier 1) with `AsyncMessageActionDecision` and `AsyncContentBlocker` for callback-based Swift FFI async operations
+- Added async feature gate for opt-in async API support
+- Added `pollster` dev dependency for async examples and tests
+- Added `doom-fish-utils` dependency for `AsyncCompletion` primitives
+- Added Swift bridge thunks for async message action decisions and content blocker queries
+- Added examples and tests for async API usage (note: most APIs are extension-only)
+
 ## [0.2.1] - 2026-05-16
 
 - Added `MessageSecurityErrorCode` plus `NSErrorInfo::message_security_error_code()` for `MEMessageSecurityHandler` failures

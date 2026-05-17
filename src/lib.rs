@@ -35,6 +35,9 @@ pub mod message_security_handler;
 mod private;
 pub mod security;
 
+#[cfg(feature = "async")]
+pub mod async_api;
+
 pub use action::{
     MessageAction, MessageActionDecision, MessageActionDecisionKind, MessageActionKind,
     MessageColor, MessageFlag,

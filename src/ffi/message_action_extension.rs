@@ -5,6 +5,9 @@ pub type MessageActionDecisionCallback =
 pub type MessageActionHeadersCallback = extern "C" fn(*mut c_void, *mut *mut c_char) -> *mut c_void;
 pub type ReleaseUserDataCallback = extern "C" fn(*mut c_void);
 
+// Async callback signature
+pub type AsyncMessageActionDecisionCallback = extern "C" fn(*const c_void, *const i8, *mut c_void);
+
 unsafe extern "C" {
     pub fn mail_message_action_extension_new(
         decide_callback: Option<MessageActionDecisionCallback>,
@@ -23,4 +26,11 @@ unsafe extern "C" {
         handler: *mut c_void,
         error_out: *mut *mut c_char,
     ) -> *mut c_void;
+
+    // Async API
+    pub fn mail_message_action_decision_async(
+        message_box: *mut c_void,
+        cb: AsyncMessageActionDecisionCallback,
+        ctx: *mut c_void,
+    );
 }

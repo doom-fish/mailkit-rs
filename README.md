@@ -2,7 +2,7 @@
 
 Safe Rust bindings for Apple’s [MailKit](https://developer.apple.com/documentation/mailkit) framework on macOS 13+.
 
-> **Status:** `v0.2.0` covers the public MailKit headers shipped with the macOS SDK and adds headless test harnesses for the Mail-hosted protocols. The crate also ships helper layers for parsing `Authentication-Results` headers and RFC822/EML attachments from `MEMessage.rawData`, because MailKit doesn’t expose public `MEAuthenticationResult` or `EMLAttachment` types.
+> **Status:** `v0.3.0` adds an async API (Tier 1) with Future-typed wrappers for callback-based Swift async operations. The crate covers the public MailKit headers shipped with the macOS SDK and adds headless test harnesses for the Mail-hosted protocols. The crate also ships helper layers for parsing `Authentication-Results` headers and RFC822/EML attachments from `MEMessage.rawData`, because MailKit doesn’t expose public `MEAuthenticationResult` or `EMLAttachment` types.
 
 ## Highlights
 
@@ -12,6 +12,7 @@ Safe Rust bindings for Apple’s [MailKit](https://developer.apple.com/documenta
 - Helper parsers for `Authentication-Results` headers and MIME attachments embedded in raw RFC822 message data
 - `ExtensionManager` helpers for `reloadVisibleMessages` and `reloadContentBlocker(withIdentifier:)`
 
+- **Async API** (Tier 1, opt-in `async` feature) with `AsyncMessageActionDecision` and `AsyncContentBlocker`
 ## Quick start
 
 ```rust,no_run
