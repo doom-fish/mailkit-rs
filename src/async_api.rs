@@ -53,6 +53,8 @@ use crate::error::MailKitError;
 use doom_fish_utils::completion::{error_from_cstr, AsyncCompletion, AsyncCompletionFuture};
 use std::ffi::c_void;
 use std::future::Future;
+use std::panic::catch_unwind;
+use std::panic::AssertUnwindSafe;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
@@ -66,37 +68,39 @@ extern "C" fn message_action_decision_callback(
     error: *const i8,
     user_data: *mut c_void,
 ) {
-    if !error.is_null() {
-        let error_msg = unsafe { error_from_cstr(error) };
-        unsafe {
-            AsyncCompletion::<crate::action::MessageActionDecision>::complete_err(
-                user_data,
-                error_msg,
-            );
-        }
-    } else if !result.is_null() {
-        let decision = unsafe {
-            crate::action::MessageActionDecision::from_box_raw(result.cast_mut())
-        };
-        match decision {
-            Ok(dec) => unsafe {
-                AsyncCompletion::complete_ok(user_data, dec);
-            },
-            Err(e) => unsafe {
+    let _ = catch_unwind(AssertUnwindSafe(|| {
+        if !error.is_null() {
+            let error_msg = unsafe { error_from_cstr(error) };
+            unsafe {
                 AsyncCompletion::<crate::action::MessageActionDecision>::complete_err(
                     user_data,
-                    e.to_string(),
+                    error_msg,
                 );
-            },
+            }
+        } else if !result.is_null() {
+            let decision = unsafe {
+                crate::action::MessageActionDecision::from_box_raw(result.cast_mut())
+            };
+            match decision {
+                Ok(dec) => unsafe {
+                    AsyncCompletion::complete_ok(user_data, dec);
+                },
+                Err(e) => unsafe {
+                    AsyncCompletion::<crate::action::MessageActionDecision>::complete_err(
+                        user_data,
+                        e.to_string(),
+                    );
+                },
+            }
+        } else {
+            unsafe {
+                AsyncCompletion::<crate::action::MessageActionDecision>::complete_err(
+                    user_data,
+                    "Unknown error".to_string(),
+                );
+            }
         }
-    } else {
-        unsafe {
-            AsyncCompletion::<crate::action::MessageActionDecision>::complete_err(
-                user_data,
-                "Unknown error".to_string(),
-            );
-        }
-    }
+    }));
 }
 
 pub struct MessageActionDecisionFuture {
@@ -155,25 +159,27 @@ extern "C" fn content_blocker_content_rules_callback(
     error: *const i8,
     user_data: *mut c_void,
 ) {
-    if !error.is_null() {
-        let error_msg = unsafe { error_from_cstr(error) };
-        unsafe { AsyncCompletion::<Vec<u8>>::complete_err(user_data, error_msg); }
-    } else if !result.is_null() {
-        let rules = unsafe { crate::private::decode_json_box::<Vec<u8>>(result.cast_mut()) };
-        match rules {
-            Ok(r) => unsafe { AsyncCompletion::complete_ok(user_data, r); },
-            Err(e) => unsafe {
-                AsyncCompletion::<Vec<u8>>::complete_err(user_data, e.to_string());
-            },
+    let _ = catch_unwind(AssertUnwindSafe(|| {
+        if !error.is_null() {
+            let error_msg = unsafe { error_from_cstr(error) };
+            unsafe { AsyncCompletion::<Vec<u8>>::complete_err(user_data, error_msg); }
+        } else if !result.is_null() {
+            let rules = unsafe { crate::private::decode_json_box::<Vec<u8>>(result.cast_mut()) };
+            match rules {
+                Ok(r) => unsafe { AsyncCompletion::complete_ok(user_data, r); },
+                Err(e) => unsafe {
+                    AsyncCompletion::<Vec<u8>>::complete_err(user_data, e.to_string());
+                },
+            }
+        } else {
+            unsafe {
+                AsyncCompletion::<Vec<u8>>::complete_err(
+                    user_data,
+                    "Unknown error".to_string(),
+                );
+            }
         }
-    } else {
-        unsafe {
-            AsyncCompletion::<Vec<u8>>::complete_err(
-                user_data,
-                "Unknown error".to_string(),
-            );
-        }
-    }
+    }));
 }
 
 pub struct ContentBlockerContentRulesFuture {

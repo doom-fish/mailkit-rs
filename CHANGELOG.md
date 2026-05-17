@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.1] - 2026-05-17
+
+- Fixed panic safety in async callbacks: `message_action_decision_callback` and `content_blocker_content_rules_callback` now use `catch_unwind` to prevent panics from unwinding across FFI boundaries
+
 ## [0.3.0] - 2026-05-17
 
 - Added `async_api` module (Tier 1) with `AsyncMessageActionDecision` and `AsyncContentBlocker` for callback-based Swift FFI async operations
