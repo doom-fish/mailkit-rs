@@ -73,14 +73,12 @@ extern "C" fn message_action_decision_callback(
             let error_msg = unsafe { error_from_cstr(error) };
             unsafe {
                 AsyncCompletion::<crate::action::MessageActionDecision>::complete_err(
-                    user_data,
-                    error_msg,
+                    user_data, error_msg,
                 );
             }
         } else if !result.is_null() {
-            let decision = unsafe {
-                crate::action::MessageActionDecision::from_box_raw(result.cast_mut())
-            };
+            let decision =
+                unsafe { crate::action::MessageActionDecision::from_box_raw(result.cast_mut()) };
             match decision {
                 Ok(dec) => unsafe {
                     AsyncCompletion::complete_ok(user_data, dec);
@@ -103,6 +101,7 @@ extern "C" fn message_action_decision_callback(
     }));
 }
 
+/// Future returned by `AsyncMessageActionDecision::decide`.
 pub struct MessageActionDecisionFuture {
     inner: AsyncCompletionFuture<crate::action::MessageActionDecision>,
 }
@@ -117,6 +116,7 @@ impl Future for MessageActionDecisionFuture {
     }
 }
 
+/// Provides async access to MailKit message-action decisions.
 pub struct AsyncMessageActionDecision;
 
 impl AsyncMessageActionDecision {
@@ -162,26 +162,28 @@ extern "C" fn content_blocker_content_rules_callback(
     let _ = catch_unwind(AssertUnwindSafe(|| {
         if !error.is_null() {
             let error_msg = unsafe { error_from_cstr(error) };
-            unsafe { AsyncCompletion::<Vec<u8>>::complete_err(user_data, error_msg); }
+            unsafe {
+                AsyncCompletion::<Vec<u8>>::complete_err(user_data, error_msg);
+            }
         } else if !result.is_null() {
             let rules = unsafe { crate::private::decode_json_box::<Vec<u8>>(result.cast_mut()) };
             match rules {
-                Ok(r) => unsafe { AsyncCompletion::complete_ok(user_data, r); },
+                Ok(r) => unsafe {
+                    AsyncCompletion::complete_ok(user_data, r);
+                },
                 Err(e) => unsafe {
                     AsyncCompletion::<Vec<u8>>::complete_err(user_data, e.to_string());
                 },
             }
         } else {
             unsafe {
-                AsyncCompletion::<Vec<u8>>::complete_err(
-                    user_data,
-                    "Unknown error".to_string(),
-                );
+                AsyncCompletion::<Vec<u8>>::complete_err(user_data, "Unknown error".to_string());
             }
         }
     }));
 }
 
+/// Future returned by `AsyncContentBlocker::content_rules_json`.
 pub struct ContentBlockerContentRulesFuture {
     inner: AsyncCompletionFuture<Vec<u8>>,
 }
@@ -196,6 +198,7 @@ impl Future for ContentBlockerContentRulesFuture {
     }
 }
 
+/// Provides async access to MailKit content-blocker rules.
 pub struct AsyncContentBlocker;
 
 impl AsyncContentBlocker {

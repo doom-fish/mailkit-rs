@@ -4,11 +4,13 @@ use std::ptr;
 use crate::error::MailKitError;
 use crate::ffi;
 
+/// Wraps `MEExtensionViewController`.
 pub struct ExtensionViewController {
     pub(crate) raw: *mut c_void,
 }
 
 impl ExtensionViewController {
+    /// Creates a new `MEExtensionViewController` wrapper.
     pub fn new() -> Result<Self, MailKitError> {
         let raw = unsafe { ffi::core::mail_extension_view_controller_new() };
         if raw.is_null() {

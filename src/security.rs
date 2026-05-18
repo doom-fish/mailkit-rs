@@ -11,12 +11,17 @@ use crate::private::{encode_json, optional_bytes_parts, to_cstring};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+/// Captures a Rust snapshot of `MEDecodedMessageBanner`.
 pub struct DecodedMessageBannerInfo {
+    /// Stores the banner title shown by MailKit.
     pub title: String,
+    /// Stores the title for the banner's primary action.
     pub primary_action_title: String,
+    /// Indicates whether MailKit allows dismissing the banner.
     pub dismissable: bool,
 }
 
+/// Wraps `MEDecodedMessageBanner`.
 pub struct DecodedMessageBanner {
     pub(crate) raw: *mut c_void,
     info: DecodedMessageBannerInfo,
@@ -24,12 +29,17 @@ pub struct DecodedMessageBanner {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+/// Captures a Rust snapshot of `MEMessageSigner`.
 pub struct MessageSignerInfo {
+    /// Stores the signer addresses reported by MailKit.
     pub email_addresses: Vec<EmailAddressInfo>,
+    /// Stores the signer label shown by MailKit.
     pub label: String,
+    /// Stores signer-specific opaque context bytes.
     pub context: Option<Vec<u8>>,
 }
 
+/// Wraps `MEMessageSigner`.
 pub struct MessageSigner {
     pub(crate) raw: *mut c_void,
     info: MessageSignerInfo,
@@ -37,21 +47,31 @@ pub struct MessageSigner {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+/// Captures the remote-content policy reported by MailKit security information.
 pub struct RemoteContentBlocking {
+    /// Indicates whether remote content should be blocked.
     pub should_block: bool,
+    /// Stores the localized reason for the remote-content policy.
     pub localized_reason: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+/// Captures a Rust snapshot of `MEMessageSecurityInformation`.
 pub struct MessageSecurityInformationInfo {
+    /// Stores the message signers reported by MailKit.
     pub signers: Vec<MessageSignerInfo>,
+    /// Indicates whether the message is encrypted.
     pub is_encrypted: bool,
+    /// Stores a signing error when one is present.
     pub signing_error: Option<NSErrorInfo>,
+    /// Stores an encryption error when one is present.
     pub encryption_error: Option<NSErrorInfo>,
+    /// Stores the remote-content blocking policy.
     pub remote_content: RemoteContentBlocking,
 }
 
+/// Wraps `MEMessageSecurityInformation`.
 pub struct MessageSecurityInformation {
     pub(crate) raw: *mut c_void,
     info: MessageSecurityInformationInfo,
@@ -59,13 +79,19 @@ pub struct MessageSecurityInformation {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+/// Captures a Rust snapshot of `MEDecodedMessage`.
 pub struct DecodedMessageInfo {
+    /// Stores decoded RFC 822 message bytes when available.
     pub raw_data: Option<Vec<u8>>,
+    /// Stores the message security information snapshot.
     pub security_information: MessageSecurityInformationInfo,
+    /// Stores opaque context bytes for follow-up actions.
     pub context: Option<Vec<u8>>,
+    /// Stores the optional banner MailKit should display.
     pub banner: Option<DecodedMessageBannerInfo>,
 }
 
+/// Wraps `MEDecodedMessage`.
 pub struct DecodedMessage {
     raw: *mut c_void,
     info: DecodedMessageInfo,
@@ -73,18 +99,25 @@ pub struct DecodedMessage {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+/// Captures the signing and encryption choices for MailKit outgoing-message encoding.
 pub struct MessageEncoding {
+    /// Indicates whether outgoing content should be signed.
     pub is_signed: bool,
+    /// Indicates whether outgoing content should be encrypted.
     pub is_encrypted: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+/// Captures a Rust snapshot of `MEEncodedOutgoingMessage`.
 pub struct EncodedOutgoingMessageInfo {
+    /// Stores encoded RFC 822 bytes ready to send.
     pub raw_data: Vec<u8>,
+    /// Stores the signing and encryption choices used to encode the message.
     pub encoding: MessageEncoding,
 }
 
+/// Wraps `MEEncodedOutgoingMessage`.
 pub struct EncodedOutgoingMessage {
     pub(crate) raw: *mut c_void,
     info: EncodedOutgoingMessageInfo,
@@ -92,19 +125,27 @@ pub struct EncodedOutgoingMessage {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+/// Captures the capabilities MailKit reports for outgoing-message security.
 pub struct OutgoingMessageCapabilities {
+    /// Indicates whether signing is available.
     pub can_sign: bool,
+    /// Indicates whether encryption is available.
     pub can_encrypt: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+/// Captures a Rust snapshot of `MEOutgoingMessageEncodingStatus`.
 pub struct OutgoingMessageEncodingStatusInfo {
+    /// Stores the available signing and encryption capabilities.
     pub capabilities: OutgoingMessageCapabilities,
+    /// Stores the primary security error when one is present.
     pub security_error: Option<NSErrorInfo>,
+    /// Stores recipient addresses that cannot be encrypted.
     pub addresses_failing_encryption: Vec<EmailAddressInfo>,
 }
 
+/// Wraps `MEOutgoingMessageEncodingStatus`.
 pub struct OutgoingMessageEncodingStatus {
     raw: *mut c_void,
     info: OutgoingMessageEncodingStatusInfo,
@@ -112,18 +153,24 @@ pub struct OutgoingMessageEncodingStatus {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+/// Captures a Rust snapshot of `MEMessageEncodingResult`.
 pub struct MessageEncodingResultInfo {
+    /// Stores the encoded outgoing message when one was produced.
     pub encoded_message: Option<EncodedOutgoingMessageInfo>,
+    /// Stores a signing error when one occurred.
     pub signing_error: Option<NSErrorInfo>,
+    /// Stores an encryption error when one occurred.
     pub encryption_error: Option<NSErrorInfo>,
 }
 
+/// Wraps `MEMessageEncodingResult`.
 pub struct MessageEncodingResult {
     raw: *mut c_void,
     info: MessageEncodingResultInfo,
 }
 
 impl DecodedMessageBanner {
+    /// Creates a `MEDecodedMessageBanner` wrapper.
     pub fn new(
         title: &str,
         primary_action_title: &str,
@@ -156,12 +203,14 @@ impl DecodedMessageBanner {
     }
 
     #[must_use]
+    /// Returns the cached decoded-message banner snapshot.
     pub const fn info(&self) -> &DecodedMessageBannerInfo {
         &self.info
     }
 }
 
 impl MessageSigner {
+    /// Creates a `MEMessageSigner` wrapper.
     pub fn new(
         email_addresses: &[&EmailAddress],
         label: &str,
@@ -203,12 +252,14 @@ impl MessageSigner {
     }
 
     #[must_use]
+    /// Returns the cached message-signer snapshot.
     pub const fn info(&self) -> &MessageSignerInfo {
         &self.info
     }
 }
 
 impl MessageSecurityInformation {
+    /// Creates a `MEMessageSecurityInformation` wrapper.
     pub fn new(
         signers: &[&MessageSigner],
         is_encrypted: bool,
@@ -262,12 +313,14 @@ impl MessageSecurityInformation {
     }
 
     #[must_use]
+    /// Returns the cached message-security-information snapshot.
     pub const fn info(&self) -> &MessageSecurityInformationInfo {
         &self.info
     }
 }
 
 impl DecodedMessage {
+    /// Creates a `MEDecodedMessage` wrapper.
     pub fn new(
         raw_data: Option<&[u8]>,
         security_information: &MessageSecurityInformation,
@@ -307,6 +360,7 @@ impl DecodedMessage {
     }
 
     #[must_use]
+    /// Returns the cached decoded-message snapshot.
     pub const fn info(&self) -> &DecodedMessageInfo {
         &self.info
     }
@@ -350,6 +404,7 @@ impl DecodedMessage {
 }
 
 impl EncodedOutgoingMessage {
+    /// Creates a `MEEncodedOutgoingMessage` wrapper.
     pub fn new(raw_data: &[u8], encoding: MessageEncoding) -> Result<Self, MailKitError> {
         let mut raw = ptr::null_mut();
         let mut error_ptr = ptr::null_mut();
@@ -376,12 +431,14 @@ impl EncodedOutgoingMessage {
     }
 
     #[must_use]
+    /// Returns the cached encoded-outgoing-message snapshot.
     pub const fn info(&self) -> &EncodedOutgoingMessageInfo {
         &self.info
     }
 }
 
 impl OutgoingMessageEncodingStatus {
+    /// Creates a `MEOutgoingMessageEncodingStatus` wrapper.
     pub fn new(
         capabilities: OutgoingMessageCapabilities,
         security_error: Option<&NSErrorInfo>,
@@ -425,6 +482,7 @@ impl OutgoingMessageEncodingStatus {
     }
 
     #[must_use]
+    /// Returns the cached outgoing-message-encoding-status snapshot.
     pub const fn info(&self) -> &OutgoingMessageEncodingStatusInfo {
         &self.info
     }
@@ -476,6 +534,7 @@ impl OutgoingMessageEncodingStatus {
 }
 
 impl MessageEncodingResult {
+    /// Creates a `MEMessageEncodingResult` wrapper.
     pub fn new(
         encoded_message: Option<&EncodedOutgoingMessage>,
         signing_error: Option<&NSErrorInfo>,
@@ -512,6 +571,7 @@ impl MessageEncodingResult {
     }
 
     #[must_use]
+    /// Returns the cached message-encoding-result snapshot.
     pub const fn info(&self) -> &MessageEncodingResultInfo {
         &self.info
     }

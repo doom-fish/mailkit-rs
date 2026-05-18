@@ -6,24 +6,35 @@ use crate::error::MailKitError;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+/// Captures one parsed authentication method from `MEAuthenticationResult` data.
 pub struct AuthenticationMethodResult {
+    /// Stores the authentication method token.
     pub method: String,
+    /// Stores the optional method version suffix.
     pub version: Option<String>,
+    /// Stores the authentication result token.
     pub result: String,
+    /// Stores the optional reason token when present.
     pub reason: Option<String>,
+    /// Stores remaining key-value properties from the header segment.
     pub properties: BTreeMap<String, String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+/// Captures a parsed `MEAuthenticationResult` snapshot.
 pub struct AuthenticationResult {
+    /// Stores the authserv-id that emitted the results.
     pub authserv_id: String,
+    /// Stores the parsed authentication-method results.
     pub methods: Vec<AuthenticationMethodResult>,
 }
 
+/// Alias matching MailKit's `MEAuthenticationResult` name.
 pub type MEAuthenticationResult = AuthenticationResult;
 
 impl AuthenticationResult {
+    /// Parses one `Authentication-Results` header value.
     pub fn parse(header_value: &str) -> Result<Self, MailKitError> {
         let mut segments = header_value
             .split(';')
@@ -49,6 +60,7 @@ impl AuthenticationResult {
         })
     }
 
+    /// Parses all `Authentication-Results` header values in a header map.
     pub fn parse_headers(
         headers: Option<&BTreeMap<String, Vec<String>>>,
     ) -> Result<Vec<Self>, MailKitError> {

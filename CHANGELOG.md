@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.3.3] - 2026-05-18
+
+- Added rustdoc coverage across the safe public MailKit surface, bringing crate documentation to 76.7%
+- Documented public wrappers with MailKit counterpart references while intentionally leaving `src/ffi/` undocumented
+
 ## [0.3.2] - 2026-05-18
 
 - Widen doom-fish-utils version bound to `<0.3` so 0.2.x resolves.

@@ -5,6 +5,7 @@ use serde::{de::DeserializeOwned, Serialize};
 use crate::error::{take_owned_c_string, MailKitError};
 use crate::ffi;
 
+/// Converts a Rust string into a NUL-terminated C string accepted by the MailKit bridge.
 pub fn to_cstring(value: &str) -> Result<CString, MailKitError> {
     CString::new(value).map_err(|_| {
         MailKitError::InvalidArgument(
@@ -53,6 +54,7 @@ pub fn encode_json_box<T: Serialize>(value: &T) -> Result<*mut core::ffi::c_void
     Ok(raw)
 }
 
+/// Writes an owned C-string error message into a MailKit out-parameter.
 pub unsafe fn write_error_out(error_out: *mut *mut i8, message: &str) {
     if error_out.is_null() {
         return;
@@ -64,6 +66,7 @@ pub unsafe fn write_error_out(error_out: *mut *mut i8, message: &str) {
     }
 }
 
+/// Returns pointer, length, and presence markers for an optional byte slice.
 pub fn optional_bytes_parts(value: Option<&[u8]>) -> (*const u8, usize, bool) {
     value.map_or((core::ptr::null(), 0, false), |bytes| {
         (bytes.as_ptr(), bytes.len(), true)

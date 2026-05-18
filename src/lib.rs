@@ -9,6 +9,7 @@
 //! framework.
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![allow(
+    clippy::doc_markdown,
     clippy::missing_const_for_fn,
     clippy::missing_errors_doc,
     clippy::module_name_repetitions,
@@ -16,26 +17,44 @@
     clippy::new_without_default
 )]
 
+/// MailKit message actions and action decisions.
 pub mod action;
+/// MailKit email-address wrappers and address annotations.
 pub mod address;
+/// Parsers and snapshots for MailKit authentication results.
 pub mod authentication_result;
+/// MailKit compose-session contexts, sessions, and handler callbacks.
 pub mod compose_session_handler;
+/// MailKit content blocker providers and wrappers.
 pub mod content_blocker;
+/// Re-exports decoded-message security wrappers.
 pub mod decoded_message;
+/// Helpers for parsing RFC 822 attachments from MailKit message data.
 pub mod eml_attachment;
+/// Re-exports encoded outgoing-message security wrappers.
 pub mod encoded_outgoing_message;
+/// Error types returned by the safe MailKit wrappers.
 pub mod error;
+/// MailKit extension registration and builder types.
 pub mod extension;
+/// MailKit extension view controller wrapper.
 pub mod extension_view_controller;
+/// Low-level FFI shims used by the safe MailKit wrappers.
 pub mod ffi;
+/// MailKit extension-manager utilities.
 pub mod manager;
+/// MailKit message snapshots and helpers.
 pub mod message;
+/// MailKit message-action handler wrappers.
 pub mod message_action_extension;
+/// MailKit message-security handler wrappers.
 pub mod message_security_handler;
 mod private;
+/// MailKit decoded and encoded message-security wrappers.
 pub mod security;
 
 #[cfg(feature = "async")]
+/// Executor-agnostic async wrappers for MailKit callbacks.
 pub mod async_api;
 
 pub use action::{

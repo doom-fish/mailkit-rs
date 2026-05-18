@@ -8,12 +8,15 @@ use crate::ffi;
 use crate::message::{Message, MessageInfo};
 use crate::private::{decode_json_box_ref, encode_json_box, write_error_out};
 
+/// Implements the callbacks MailKit expects from `MEMessageActionHandler`.
 pub trait MessageActionHandler: Send + Sync + 'static {
+    /// Returns the MailKit action decision for the supplied message.
     fn decide_action_for_message(
         &self,
         message: &Message,
     ) -> Result<Option<MessageActionDecision>, MailKitError>;
 
+    /// Returns the message headers that must be fetched before MailKit calls the handler.
     fn required_headers(&self) -> Result<Vec<String>, MailKitError> {
         Ok(Vec::new())
     }
@@ -23,16 +26,19 @@ struct MessageActionHandlerState {
     handler: Box<dyn MessageActionHandler>,
 }
 
+/// Wraps a Rust implementation of `MEMessageActionHandler`.
 pub struct MessageActionExtension {
     raw: *mut c_void,
 }
 
 impl MessageActionExtension {
     #[must_use]
+    /// Returns the retained native MailKit object pointer.
     pub const fn raw(&self) -> *mut c_void {
         self.raw
     }
 
+    /// Creates a MailKit message-action handler wrapper from a Rust delegate.
     pub fn new<H: MessageActionHandler>(handler: H) -> Result<Self, MailKitError> {
         let state = Box::new(MessageActionHandlerState {
             handler: Box::new(handler),
@@ -59,6 +65,7 @@ impl MessageActionExtension {
         Ok(Self { raw })
     }
 
+    /// Invokes the wrapped message-action callback for the supplied message.
     pub fn decide_action_for_message(
         &self,
         message: &Message,
@@ -83,6 +90,7 @@ impl MessageActionExtension {
         }?))
     }
 
+    /// Returns the additional headers required by the wrapped delegate.
     pub fn required_headers(&self) -> Result<Vec<String>, MailKitError> {
         let mut error_ptr = ptr::null_mut();
         let result = unsafe {

@@ -16,18 +16,23 @@ use crate::security::{
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+/// Represents MailKit message-security error codes.
 pub enum MessageSecurityErrorCode {
+    /// Represents an outgoing-message encoding failure.
     EncodingError = 0,
+    /// Represents an incoming-message decoding failure.
     DecodingError = 1,
 }
 
 impl MessageSecurityErrorCode {
     #[must_use]
+    /// Returns the MailKit integer constant for this message-security error.
     pub const fn as_code(self) -> i64 {
         self as i64
     }
 
     #[must_use]
+    /// Converts a MailKit integer constant into a message-security error code.
     pub const fn from_code(code: i64) -> Option<Self> {
         match code {
             0 => Some(Self::EncodingError),
@@ -37,28 +42,34 @@ impl MessageSecurityErrorCode {
     }
 }
 
+/// Returns the `NSError` domain used by MailKit message-security failures.
 pub fn message_security_error_domain() -> String {
     take_owned_c_string(unsafe { ffi::core::mail_message_security_error_domain_copy() })
 }
 
+/// Implements the callbacks MailKit expects from `MEMessageSecurityHandler`.
 pub trait MessageSecurityHandlerDelegate: Send + Sync + 'static {
+    /// Decodes incoming message data for MailKit.
     fn decoded_message_for_message_data(
         &self,
         data: &[u8],
     ) -> Result<Option<DecodedMessage>, MailKitError>;
 
+    /// Returns outgoing-message security capabilities for MailKit.
     fn encoding_status_for_message(
         &self,
         message: &Message,
         compose_context: &ComposeContext,
     ) -> Result<OutgoingMessageEncodingStatus, MailKitError>;
 
+    /// Encodes an outgoing message for MailKit.
     fn encode_message(
         &self,
         message: &Message,
         compose_context: &ComposeContext,
     ) -> Result<MessageEncodingResult, MailKitError>;
 
+    /// Returns a view controller for signer details when MailKit asks for one.
     fn extension_view_controller_for_signers(
         &self,
         _message_signers: &[MessageSignerInfo],
@@ -66,6 +77,7 @@ pub trait MessageSecurityHandlerDelegate: Send + Sync + 'static {
         Ok(None)
     }
 
+    /// Returns a view controller for opaque message context data.
     fn extension_view_controller_for_message_context(
         &self,
         _context: &[u8],
@@ -73,6 +85,7 @@ pub trait MessageSecurityHandlerDelegate: Send + Sync + 'static {
         Ok(None)
     }
 
+    /// Handles MailKit's primary-action click for opaque message context data.
     fn primary_action_clicked_for_message_context(
         &self,
         _context: &[u8],
@@ -85,16 +98,19 @@ struct MessageSecurityHandlerState {
     handler: Box<dyn MessageSecurityHandlerDelegate>,
 }
 
+/// Wraps `MEMessageSecurityHandler`.
 pub struct MessageSecurityHandler {
     raw: *mut c_void,
 }
 
 impl MessageSecurityHandler {
     #[must_use]
+    /// Returns the retained native MailKit object pointer.
     pub const fn raw(&self) -> *mut c_void {
         self.raw
     }
 
+    /// Creates a `MEMessageSecurityHandler` wrapper from a Rust delegate.
     pub fn new<H: MessageSecurityHandlerDelegate>(handler: H) -> Result<Self, MailKitError> {
         let state = Box::new(MessageSecurityHandlerState {
             handler: Box::new(handler),
@@ -127,6 +143,7 @@ impl MessageSecurityHandler {
         Ok(Self { raw })
     }
 
+    /// Invokes the wrapped decode callback for incoming message data.
     pub fn decoded_message_for_message_data(
         &self,
         data: &[u8],
@@ -149,6 +166,7 @@ impl MessageSecurityHandler {
         Ok(Some(unsafe { DecodedMessage::from_box_raw(result) }?))
     }
 
+    /// Invokes the wrapped encoding-status callback for an outgoing message.
     pub fn encoding_status_for_message(
         &self,
         message: &Message,
@@ -171,6 +189,7 @@ impl MessageSecurityHandler {
         unsafe { OutgoingMessageEncodingStatus::from_box_raw(result) }
     }
 
+    /// Invokes the wrapped encode callback for an outgoing message.
     pub fn encode_message(
         &self,
         message: &Message,
@@ -193,6 +212,7 @@ impl MessageSecurityHandler {
         unsafe { MessageEncodingResult::from_box_raw(result) }
     }
 
+    /// Returns the extension view controller for the supplied signers.
     pub fn extension_view_controller_for_signers(
         &self,
         message_signers: &[MessageSignerInfo],
@@ -215,6 +235,7 @@ impl MessageSecurityHandler {
         Ok(Some(ExtensionViewController::from_raw(result)?))
     }
 
+    /// Returns the extension view controller for the supplied message context.
     pub fn extension_view_controller_for_message_context(
         &self,
         context: &[u8],
@@ -237,6 +258,7 @@ impl MessageSecurityHandler {
         Ok(Some(ExtensionViewController::from_raw(result)?))
     }
 
+    /// Invokes the wrapped primary-action callback for banner context.
     pub fn primary_action_clicked_for_message_context(
         &self,
         context: &[u8],

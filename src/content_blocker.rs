@@ -6,7 +6,9 @@ use crate::error::{from_swift, MailKitError};
 use crate::ffi;
 use crate::private::{decode_json_box, encode_json_box, write_error_out};
 
+/// Provides the content rules that back `MEContentBlocker`.
 pub trait ContentBlockerProvider: Send + Sync + 'static {
+    /// Returns the JSON rule payload that should back `MEContentBlocker`.
     fn content_rules_json(&self) -> Result<Vec<u8>, MailKitError>;
 }
 
@@ -14,16 +16,19 @@ struct ContentBlockerState {
     provider: Box<dyn ContentBlockerProvider>,
 }
 
+/// Wraps `MEContentBlocker`.
 pub struct ContentBlocker {
     raw: *mut c_void,
 }
 
 impl ContentBlocker {
     #[must_use]
+    /// Returns the retained native MailKit object pointer.
     pub const fn raw(&self) -> *mut c_void {
         self.raw
     }
 
+    /// Creates a `MEContentBlocker` wrapper from a Rust provider.
     pub fn new<H: ContentBlockerProvider>(provider: H) -> Result<Self, MailKitError> {
         let state = Box::new(ContentBlockerState {
             provider: Box::new(provider),
@@ -49,6 +54,7 @@ impl ContentBlocker {
         Ok(Self { raw })
     }
 
+    /// Returns the content blocker rules as JSON bytes.
     pub fn content_rules_json(&self) -> Result<Vec<u8>, MailKitError> {
         let mut error_ptr = ptr::null_mut();
         let result = unsafe {

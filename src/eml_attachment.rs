@@ -7,19 +7,29 @@ use crate::error::MailKitError;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+/// Captures one attachment parsed from RFC 822 data returned by MailKit.
 pub struct EmlAttachment {
+    /// Stores the attachment MIME type.
     pub content_type: String,
+    /// Stores the attachment file name when present.
     pub file_name: Option<String>,
+    /// Stores the attachment content identifier when present.
     pub content_id: Option<String>,
+    /// Stores the attachment content disposition when present.
     pub content_disposition: Option<String>,
+    /// Stores the declared transfer encoding when present.
     pub content_transfer_encoding: Option<String>,
+    /// Stores the raw attachment headers.
     pub headers: BTreeMap<String, String>,
+    /// Stores the decoded attachment body bytes.
     pub data: Vec<u8>,
 }
 
+/// Alias for `EmlAttachment` using the common RFC 822 acronym.
 pub type EMLAttachment = EmlAttachment;
 
 impl EmlAttachment {
+    /// Parses every attachment from RFC 822 message data.
     pub fn parse_all(raw_eml: &[u8]) -> Result<Vec<Self>, MailKitError> {
         let parsed = parse_mail(raw_eml).map_err(|error| {
             MailKitError::InvalidArgument(format!("failed to parse RFC822 message data: {error}"))

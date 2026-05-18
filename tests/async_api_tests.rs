@@ -51,4 +51,3 @@ fn test_simple_message_creation() {
     let message = mailkit::Message::new(info);
     assert_eq!(message.info().subject, "Test Subject");
 }
-

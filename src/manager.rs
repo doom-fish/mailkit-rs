@@ -7,13 +7,16 @@ use crate::private::to_cstring;
 
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(5);
 
+/// Wraps `MEExtensionManager` utility operations.
 pub struct ExtensionManager;
 
 impl ExtensionManager {
+    /// Requests MailKit to reload messages visible in Mail.
     pub fn reload_visible_messages() -> Result<(), MailKitError> {
         Self::reload_visible_messages_with_timeout(DEFAULT_TIMEOUT)
     }
 
+    /// Requests MailKit to reload visible messages with a custom timeout.
     pub fn reload_visible_messages_with_timeout(timeout: Duration) -> Result<(), MailKitError> {
         let mut error_ptr = ptr::null_mut();
         let status = unsafe {
@@ -28,10 +31,12 @@ impl ExtensionManager {
         Ok(())
     }
 
+    /// Requests MailKit to reload the named content blocker.
     pub fn reload_content_blocker(identifier: &str) -> Result<(), MailKitError> {
         Self::reload_content_blocker_with_timeout(identifier, DEFAULT_TIMEOUT)
     }
 
+    /// Requests MailKit to reload the named content blocker with a custom timeout.
     pub fn reload_content_blocker_with_timeout(
         identifier: &str,
         timeout: Duration,

@@ -9,14 +9,19 @@ use crate::message_security_handler::{message_security_error_domain, MessageSecu
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+/// Captures a serializable snapshot of `NSError`.
 pub struct NSErrorInfo {
+    /// Stores the `NSError` domain.
     pub domain: String,
+    /// Stores the `NSError` code.
     pub code: i64,
+    /// Stores the localized error description.
     pub localized_description: String,
 }
 
 impl NSErrorInfo {
     #[must_use]
+    /// Creates a serializable `NSError` snapshot.
     pub fn new(
         domain: impl Into<String>,
         code: i64,
@@ -30,6 +35,7 @@ impl NSErrorInfo {
     }
 
     #[must_use]
+    /// Converts this `NSError` into a MailKit message-security error code when the domains match.
     pub fn message_security_error_code(&self) -> Option<MessageSecurityErrorCode> {
         if self.domain == message_security_error_domain() {
             MessageSecurityErrorCode::from_code(self.code)
@@ -41,16 +47,28 @@ impl NSErrorInfo {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
+/// Represents errors produced by the safe MailKit wrappers.
 pub enum MailKitError {
+    /// Indicates that Rust code passed an invalid argument into MailKit.
     InvalidArgument(String),
+    /// Wraps an `NSError` returned by MailKit.
     OperationFailed(Box<NSErrorInfo>),
+    /// Reports a framework-side failure without structured `NSError` data.
     FrameworkError(String),
+    /// Reports that a MailKit operation timed out.
     Timeout(String),
-    Unknown { code: i32, message: String },
+    /// Captures an unrecognized MailKit status code.
+    Unknown {
+        /// Stores the raw MailKit status code.
+        code: i32,
+        /// Stores the framework message that accompanied the status code.
+        message: String,
+    },
 }
 
 impl MailKitError {
     #[must_use]
+    /// Returns the MailKit status code represented by this error.
     pub const fn code(&self) -> i32 {
         match self {
             Self::InvalidArgument(_) => ffi::status::INVALID_ARGUMENT,
@@ -62,6 +80,7 @@ impl MailKitError {
     }
 
     #[must_use]
+    /// Returns the human-readable message for this error.
     pub fn message(&self) -> String {
         match self {
             Self::OperationFailed(error) => error.localized_description.clone(),
