@@ -1,3 +1,4 @@
+#[cfg(feature = "async")]
 use mailkit::prelude::*;
 
 #[cfg(feature = "async")]
@@ -37,8 +38,10 @@ fn main() {
     println!("Run with: cargo run --example 01_async_content_blocker --features async");
 }
 
+#[cfg(feature = "async")]
 struct SimpleContentBlockerProvider;
 
+#[cfg(feature = "async")]
 impl ContentBlockerProvider for SimpleContentBlockerProvider {
     fn content_rules_json(&self) -> Result<Vec<u8>, mailkit::MailKitError> {
         let rules: Vec<u8> = vec![];

@@ -47,7 +47,7 @@ checksum = "a4ae5f15dda3c708c0ade84bfee31ccab44a3da4f88015ed22f63732abe300c8"
 
 [[package]]
 name = "doom-fish-utils"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "crossbeam-queue",
  "futures-util",
@@ -99,7 +99,7 @@ checksum = "68ab91017fe16c622486840e4c83c9a37afeff978bd239b5293d61ece587de66"
 
 [[package]]
 name = "mailkit-rs"
-version = "0.3.4"
+version = "0.3.5"
 dependencies = [
  "doom-fish-utils",
  "libc",
