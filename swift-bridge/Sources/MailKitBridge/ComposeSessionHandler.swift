@@ -475,3 +475,70 @@ func mail_compose_session_handler_test_additional_headers(
         return nil
     }
 }
+
+@_cdecl("mail_compose_session_handler_annotate_addresses_async")
+func mail_compose_session_handler_annotate_addresses_async(
+    _ handler: UnsafeMutableRawPointer?,
+    _ session: UnsafeMutableRawPointer?,
+    _ cb: @escaping @convention(c) (UnsafeRawPointer?, UnsafePointer<CChar>?, UnsafeMutableRawPointer) -> Void,
+    _ ctx: UnsafeMutableRawPointer
+) {
+    do {
+        guard let handler = mailTakeObject(handler, as: RustComposeSessionHandler.self),
+              let session = mailConsumeObject(session, as: MailComposeSessionBox.self)
+        else {
+            throw MailBridgeError.invalidArgument("compose session async annotate inputs were null")
+        }
+        do {
+            cb(try mailJSONBoxPointer(for: handler.annotationEntries(for: session)), nil, ctx)
+        } catch {
+            error.localizedDescription.withCString { errorCString in
+                cb(nil, errorCString, ctx)
+            }
+        }
+    } catch {
+        error.localizedDescription.withCString { errorCString in
+            cb(nil, errorCString, ctx)
+        }
+    }
+}
+
+@_cdecl("mail_compose_session_handler_allow_message_send_async")
+func mail_compose_session_handler_allow_message_send_async(
+    _ handler: UnsafeMutableRawPointer?,
+    _ session: UnsafeMutableRawPointer?,
+    _ cb: @escaping @convention(c) (UnsafeRawPointer?, UnsafePointer<CChar>?, UnsafeMutableRawPointer) -> Void,
+    _ ctx: UnsafeMutableRawPointer
+) {
+    do {
+        guard let handler = mailTakeObject(handler, as: RustComposeSessionHandler.self),
+              let session = mailConsumeObject(session, as: MailComposeSessionBox.self)
+        else {
+            throw MailBridgeError.invalidArgument("compose session async send inputs were null")
+        }
+        do {
+            if let sendError = try handler.canSendError(for: session) {
+                do {
+                    let payload = try mailJSONString(from: mailNSErrorPayload(sendError))
+                    payload.withCString { errorCString in
+                        cb(nil, errorCString, ctx)
+                    }
+                } catch {
+                    sendError.localizedDescription.withCString { errorCString in
+                        cb(nil, errorCString, ctx)
+                    }
+                }
+            } else {
+                cb(nil, nil, ctx)
+            }
+        } catch {
+            error.localizedDescription.withCString { errorCString in
+                cb(nil, errorCString, ctx)
+            }
+        }
+    } catch {
+        error.localizedDescription.withCString { errorCString in
+            cb(nil, errorCString, ctx)
+        }
+    }
+}

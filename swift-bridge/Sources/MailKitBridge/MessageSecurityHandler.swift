@@ -395,3 +395,100 @@ func mail_message_security_handler_test_primary_action_clicked(
         return nil
     }
 }
+
+@_cdecl("mail_message_security_handler_encoding_status_async")
+func mail_message_security_handler_encoding_status_async(
+    _ handler: UnsafeMutableRawPointer?,
+    _ messageBox: UnsafeMutableRawPointer?,
+    _ contextBox: UnsafeMutableRawPointer?,
+    _ cb: @escaping @convention(c) (UnsafeRawPointer?, UnsafePointer<CChar>?, UnsafeMutableRawPointer) -> Void,
+    _ ctx: UnsafeMutableRawPointer
+) {
+    do {
+        guard let handler = mailTakeObject(handler, as: RustMessageSecurityHandler.self),
+              let messageBox,
+              let contextBox
+        else {
+            throw MailBridgeError.invalidArgument("message-security async status inputs were null")
+        }
+        let message = try mailDecodeConsumedJSONBox(messageBox, as: MailMessageSnapshot.self)
+        let context = try mailDecodeConsumedJSONBox(contextBox, as: MailComposeContextSnapshot.self)
+        do {
+            cb(mailRetainedPointer(try handler.encodingStatusBox(message: message, composeContext: context)), nil, ctx)
+        } catch {
+            error.localizedDescription.withCString { errorCString in
+                cb(nil, errorCString, ctx)
+            }
+        }
+    } catch {
+        error.localizedDescription.withCString { errorCString in
+            cb(nil, errorCString, ctx)
+        }
+    }
+}
+
+@_cdecl("mail_message_security_handler_encode_message_async")
+func mail_message_security_handler_encode_message_async(
+    _ handler: UnsafeMutableRawPointer?,
+    _ messageBox: UnsafeMutableRawPointer?,
+    _ contextBox: UnsafeMutableRawPointer?,
+    _ cb: @escaping @convention(c) (UnsafeRawPointer?, UnsafePointer<CChar>?, UnsafeMutableRawPointer) -> Void,
+    _ ctx: UnsafeMutableRawPointer
+) {
+    do {
+        guard let handler = mailTakeObject(handler, as: RustMessageSecurityHandler.self),
+              let messageBox,
+              let contextBox
+        else {
+            throw MailBridgeError.invalidArgument("message-security async encode inputs were null")
+        }
+        let message = try mailDecodeConsumedJSONBox(messageBox, as: MailMessageSnapshot.self)
+        let context = try mailDecodeConsumedJSONBox(contextBox, as: MailComposeContextSnapshot.self)
+        do {
+            cb(mailRetainedPointer(try handler.encodingResultBox(message: message, composeContext: context)), nil, ctx)
+        } catch {
+            error.localizedDescription.withCString { errorCString in
+                cb(nil, errorCString, ctx)
+            }
+        }
+    } catch {
+        error.localizedDescription.withCString { errorCString in
+            cb(nil, errorCString, ctx)
+        }
+    }
+}
+
+@_cdecl("mail_message_security_handler_primary_action_clicked_async")
+func mail_message_security_handler_primary_action_clicked_async(
+    _ handler: UnsafeMutableRawPointer?,
+    _ contextBox: UnsafeMutableRawPointer?,
+    _ cb: @escaping @convention(c) (UnsafeRawPointer?, UnsafePointer<CChar>?, UnsafeMutableRawPointer) -> Void,
+    _ ctx: UnsafeMutableRawPointer
+) {
+    do {
+        guard let handler = mailTakeObject(handler, as: RustMessageSecurityHandler.self),
+              let contextBox
+        else {
+            throw MailBridgeError.invalidArgument("message-security async primary-action inputs were null")
+        }
+        let context = try mailDecodeConsumedJSONBox(contextBox, as: [UInt8].self)
+        do {
+            if let controller = try handler.controller(
+                callback: handler.primaryActionCallback,
+                jsonValue: context
+            ) {
+                cb(mailRetainedPointer(controller), nil, ctx)
+            } else {
+                cb(nil, nil, ctx)
+            }
+        } catch {
+            error.localizedDescription.withCString { errorCString in
+                cb(nil, errorCString, ctx)
+            }
+        }
+    } catch {
+        error.localizedDescription.withCString { errorCString in
+            cb(nil, errorCString, ctx)
+        }
+    }
+}

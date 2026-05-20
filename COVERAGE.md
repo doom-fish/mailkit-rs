@@ -1,6 +1,6 @@
 # MailKit coverage audit
 
-Audited against `/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk/System/Library/Frameworks/MailKit.framework/Headers`.
+Audited against `/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk/System/Library/Frameworks/MailKit.framework/Headers`.
 
 ## Requested logical-area mapping
 
@@ -16,6 +16,16 @@ Audited against `/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.pla
 | `MEAuthenticationResult` | _no public MailKit type_ | ✅ helper | Implemented as `AuthenticationResult` over `Authentication-Results` headers. |
 | `MEDecodedMessage` | `MEDecodedMessage` + `MEDecodedMessageBanner` | ✅ implemented | Includes safe constructors and round-trip box support for handler callbacks. |
 | `MEEncodedOutgoingMessage` | `MEEncodedOutgoingMessage` + related encoding result/status types | ✅ implemented | Includes encode-status/result round-trip support. |
+
+## Async surface
+
+With the optional `async` feature enabled, `mailkit::async_api` exposes executor-agnostic futures for:
+
+- `AsyncMessageActionDecision::decide`
+- `AsyncContentBlocker::content_rules_json`
+- `AsyncComposeSessionHandler::{annotate_addresses_for_session, allow_message_send_for_session}`
+- `AsyncMessageSecurityHandler::{encoding_status_for_message, encode_message, primary_action_clicked_for_message_context}`
+- `AsyncExtensionManager::{reload_visible_messages, reload_content_blocker}`
 
 ## Header coverage
 
@@ -41,10 +51,10 @@ Audited against `/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.pla
 | `MEComposeSession.h` | `MEComposeSessionHandler.mailComposeSessionDidBegin(_:)` | ✅ implemented | `ComposeSessionHandlerDelegate::mail_compose_session_did_begin`. |
 | `MEComposeSession.h` | `MEComposeSessionHandler.mailComposeSessionDidEnd(_:)` | ✅ implemented | `ComposeSessionHandlerDelegate::mail_compose_session_did_end`. |
 | `MEComposeSession.h` | `MEComposeSessionHandler.viewControllerForSession(_:)` | ✅ implemented | `ComposeSessionHandlerDelegate::view_controller_for_session`. |
-| `MEComposeSession.h` | `MEComposeSessionHandler.session(_:annotateAddressesWithCompletionHandler:)` | ✅ implemented | `ComposeSessionHandlerDelegate::annotate_addresses_for_session`. |
-| `MEComposeSession.h` | `MEComposeSessionHandler.session(_:canSendMessageWithCompletionHandler:)` | ✅ implemented | `ComposeSessionHandlerDelegate::allow_message_send_for_session`. |
+| `MEComposeSession.h` | `MEComposeSessionHandler.session(_:annotateAddressesWithCompletionHandler:)` | ✅ implemented | `ComposeSessionHandlerDelegate::annotate_addresses_for_session`; `async_api::AsyncComposeSessionHandler::annotate_addresses_for_session`. |
+| `MEComposeSession.h` | `MEComposeSessionHandler.session(_:canSendMessageWithCompletionHandler:)` | ✅ implemented | `ComposeSessionHandlerDelegate::allow_message_send_for_session`; `async_api::AsyncComposeSessionHandler::allow_message_send_for_session`. |
 | `MEComposeSession.h` | `MEComposeSessionHandler.additionalHeadersForSession(_:)` | ✅ implemented | `ComposeSessionHandlerDelegate::additional_headers_for_session`. |
-| `MEContentBlocker.h` | `MEContentBlocker.contentRulesJSON()` | ✅ implemented | `ContentBlockerProvider::content_rules_json`. |
+| `MEContentBlocker.h` | `MEContentBlocker.contentRulesJSON()` | ✅ implemented | `ContentBlockerProvider::content_rules_json`; `async_api::AsyncContentBlocker::content_rules_json`. |
 | `MEDecodedMessage.h` | `MEDecodedMessage.rawData` | ✅ implemented | `DecodedMessageInfo.raw_data`. |
 | `MEDecodedMessage.h` | `MEDecodedMessage.securityInformation` | ✅ implemented | `DecodedMessageInfo.security_information`. |
 | `MEDecodedMessage.h` | `MEDecodedMessage.context` | ✅ implemented | `DecodedMessageInfo.context`. |
@@ -66,8 +76,8 @@ Audited against `/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.pla
 | `MEExtension.h` | `MEExtension.handlerForMessageActions()` | ✅ implemented | `MailExtension` Swift bridge advertises the selector when a message-action handler is configured. |
 | `MEExtension.h` | `MEExtension.handlerForContentBlocker()` | ✅ implemented | `MailExtension` Swift bridge advertises the selector when a content blocker is configured. |
 | `MEExtension.h` | `MEExtension.handlerForMessageSecurity()` | ✅ implemented | `MailExtension` Swift bridge advertises the selector when a message-security handler is configured. |
-| `MEExtensionManager.h` | `MEExtensionManager.reloadContentBlocker(withIdentifier:completionHandler:)` | ✅ implemented | `ExtensionManager::reload_content_blocker`. |
-| `MEExtensionManager.h` | `MEExtensionManager.reloadVisibleMessages(completionHandler:)` | ✅ implemented | `ExtensionManager::reload_visible_messages`. |
+| `MEExtensionManager.h` | `MEExtensionManager.reloadContentBlocker(withIdentifier:completionHandler:)` | ✅ implemented | `ExtensionManager::reload_content_blocker`; `async_api::AsyncExtensionManager::reload_content_blocker`. |
+| `MEExtensionManager.h` | `MEExtensionManager.reloadVisibleMessages(completionHandler:)` | ✅ implemented | `ExtensionManager::reload_visible_messages`; `async_api::AsyncExtensionManager::reload_visible_messages`. |
 | `MEExtensionViewController.h` | `MEExtensionViewController` | ✅ implemented | `ExtensionViewController::new` and handler round-trips. |
 | `MEMessage.h` | `MEMessageState` | ✅ implemented | `MessageState`. |
 | `MEMessage.h` | `MEMessageEncryptionState` | ✅ implemented | `MessageEncryptionState`. |
@@ -96,11 +106,11 @@ Audited against `/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.pla
 | `MEMessageActionDecision.h` | `MEMessageActionDecision.invokeAgainWithBody` | ✅ implemented | `MessageActionDecision::invoke_again_with_body`. |
 | `MEMessageActionDecision.h` | `MEMessageActionDecision.action(_:)` | ✅ implemented | `MessageActionDecision::action`. |
 | `MEMessageActionDecision.h` | `MEMessageActionDecision.actions(_:)` | ✅ implemented | `MessageActionDecision::actions`. |
-| `MEMessageActionHandler.h` | `MEMessageActionHandler.decideAction(for:completionHandler:)` | ✅ implemented | `MessageActionHandler::decide_action_for_message`. |
+| `MEMessageActionHandler.h` | `MEMessageActionHandler.decideAction(for:completionHandler:)` | ✅ implemented | `MessageActionHandler::decide_action_for_message`; `async_api::AsyncMessageActionDecision::decide`. |
 | `MEMessageActionHandler.h` | `MEMessageActionHandler.requiredHeaders` | ✅ implemented | `MessageActionHandler::required_headers`. |
 | `MEMessageDecoder.h` | `MEMessageDecoder.decodedMessage(forMessageData:)` | ✅ implemented | `MessageSecurityHandlerDelegate::decoded_message_for_message_data`. |
-| `MEMessageEncoder.h` | `MEMessageEncoder.getEncodingStatus(for:composeContext:completionHandler:)` | ✅ implemented | `MessageSecurityHandlerDelegate::encoding_status_for_message`. |
-| `MEMessageEncoder.h` | `MEMessageEncoder.encode(_:composeContext:completionHandler:)` | ✅ implemented | `MessageSecurityHandlerDelegate::encode_message`. |
+| `MEMessageEncoder.h` | `MEMessageEncoder.getEncodingStatus(for:composeContext:completionHandler:)` | ✅ implemented | `MessageSecurityHandlerDelegate::encoding_status_for_message`; `async_api::AsyncMessageSecurityHandler::encoding_status_for_message`. |
+| `MEMessageEncoder.h` | `MEMessageEncoder.encode(_:composeContext:completionHandler:)` | ✅ implemented | `MessageSecurityHandlerDelegate::encode_message`; `async_api::AsyncMessageSecurityHandler::encode_message`. |
 | `MEMessageEncodingResult.h` | `MEMessageEncodingResult.encodedMessage` | ✅ implemented | `MessageEncodingResultInfo.encoded_message`. |
 | `MEMessageEncodingResult.h` | `MEMessageEncodingResult.signingError` | ✅ implemented | `MessageEncodingResultInfo.signing_error`. |
 | `MEMessageEncodingResult.h` | `MEMessageEncodingResult.encryptionError` | ✅ implemented | `MessageEncodingResultInfo.encryption_error`. |
@@ -109,7 +119,7 @@ Audited against `/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.pla
 | `MEMessageSecurityHandler.h` | `MEMessageSecurityErrorCode` | ✅ implemented | `MessageSecurityErrorCode` plus `NSErrorInfo::message_security_error_code()`. |
 | `MEMessageSecurityHandler.h` | `MEMessageSecurityHandler.extensionViewController(signers:)` | ✅ implemented | `MessageSecurityHandlerDelegate::extension_view_controller_for_signers`. |
 | `MEMessageSecurityHandler.h` | `MEMessageSecurityHandler.extensionViewController(messageContext:)` | ✅ implemented | `MessageSecurityHandlerDelegate::extension_view_controller_for_message_context`. |
-| `MEMessageSecurityHandler.h` | `MEMessageSecurityHandler.primaryActionClicked(forMessageContext:completionHandler:)` | ✅ implemented | `MessageSecurityHandlerDelegate::primary_action_clicked_for_message_context`. |
+| `MEMessageSecurityHandler.h` | `MEMessageSecurityHandler.primaryActionClicked(forMessageContext:completionHandler:)` | ✅ implemented | `MessageSecurityHandlerDelegate::primary_action_clicked_for_message_context`; `async_api::AsyncMessageSecurityHandler::primary_action_clicked_for_message_context`. |
 | `MEMessageSecurityInformation.h` | `MEMessageSecurityInformation.signers` | ✅ implemented | `MessageSecurityInformationInfo.signers`. |
 | `MEMessageSecurityInformation.h` | `MEMessageSecurityInformation.isEncrypted` | ✅ implemented | `MessageSecurityInformationInfo.is_encrypted`. |
 | `MEMessageSecurityInformation.h` | `MEMessageSecurityInformation.signingError` | ✅ implemented | `MessageSecurityInformationInfo.signing_error`. |

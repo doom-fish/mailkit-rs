@@ -7,6 +7,7 @@ pub type MessageSecurityEncodeCallback =
 pub type MessageSecurityControllerCallback =
     extern "C" fn(*mut c_void, *mut c_void, *mut *mut c_char) -> *mut c_void;
 pub type ReleaseUserDataCallback = extern "C" fn(*mut c_void);
+pub type AsyncMessageSecurityCallback = extern "C" fn(*const c_void, *const i8, *mut c_void);
 
 unsafe extern "C" {
     pub fn mail_decoded_message_banner_new(
@@ -118,4 +119,25 @@ unsafe extern "C" {
         context_box: *mut c_void,
         error_out: *mut *mut c_char,
     ) -> *mut c_void;
+
+    pub fn mail_message_security_handler_encoding_status_async(
+        handler: *mut c_void,
+        message_box: *mut c_void,
+        context_box: *mut c_void,
+        cb: AsyncMessageSecurityCallback,
+        ctx: *mut c_void,
+    );
+    pub fn mail_message_security_handler_encode_message_async(
+        handler: *mut c_void,
+        message_box: *mut c_void,
+        context_box: *mut c_void,
+        cb: AsyncMessageSecurityCallback,
+        ctx: *mut c_void,
+    );
+    pub fn mail_message_security_handler_primary_action_clicked_async(
+        handler: *mut c_void,
+        context_box: *mut c_void,
+        cb: AsyncMessageSecurityCallback,
+        ctx: *mut c_void,
+    );
 }

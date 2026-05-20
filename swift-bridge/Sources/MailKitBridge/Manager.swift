@@ -85,3 +85,57 @@ func mail_extension_manager_reload_content_blocker(
         }
     }
 }
+
+@_cdecl("mail_extension_manager_reload_visible_messages_async")
+func mail_extension_manager_reload_visible_messages_async(
+    _ cb: @escaping @convention(c) (UnsafeRawPointer?, UnsafePointer<CChar>?, UnsafeMutableRawPointer) -> Void,
+    _ ctx: UnsafeMutableRawPointer
+) {
+    MEExtensionManager.reloadVisibleMessages { error in
+        guard let error = error as NSError? else {
+            cb(nil, nil, ctx)
+            return
+        }
+        do {
+            let payload = try mailJSONString(from: mailNSErrorPayload(error))
+            payload.withCString { errorCString in
+                cb(nil, errorCString, ctx)
+            }
+        } catch {
+            error.localizedDescription.withCString { errorCString in
+                cb(nil, errorCString, ctx)
+            }
+        }
+    }
+}
+
+@_cdecl("mail_extension_manager_reload_content_blocker_async")
+func mail_extension_manager_reload_content_blocker_async(
+    _ identifier: UnsafePointer<CChar>?,
+    _ cb: @escaping @convention(c) (UnsafeRawPointer?, UnsafePointer<CChar>?, UnsafeMutableRawPointer) -> Void,
+    _ ctx: UnsafeMutableRawPointer
+) {
+    guard let identifier else {
+        "MailKit content blocker identifier was null".withCString { errorCString in
+            cb(nil, errorCString, ctx)
+        }
+        return
+    }
+    let contentBlockerIdentifier = String(cString: identifier)
+    MEExtensionManager.reloadContentBlocker(withIdentifier: contentBlockerIdentifier) { error in
+        guard let error = error as NSError? else {
+            cb(nil, nil, ctx)
+            return
+        }
+        do {
+            let payload = try mailJSONString(from: mailNSErrorPayload(error))
+            payload.withCString { errorCString in
+                cb(nil, errorCString, ctx)
+            }
+        } catch {
+            error.localizedDescription.withCString { errorCString in
+                cb(nil, errorCString, ctx)
+            }
+        }
+    }
+}

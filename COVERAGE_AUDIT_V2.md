@@ -1,4 +1,4 @@
-# mailkit-rs coverage audit v2 (vs MacOSX26.2.sdk)
+# mailkit-rs coverage audit v2 (vs MacOSX26.5.sdk)
 
 SDK_PUBLIC_SYMBOLS: 32
 VERIFIED: 32
@@ -6,7 +6,7 @@ GAPS: 0
 EXEMPT: 0
 COVERAGE_PCT: 100
 
-Comprehensive audit of MailKit.framework public surface (top-level symbols only) against the mailkit-rs crate wrapper. All 32 public symbols from the SDK are verified as present in the crate's Rust and Swift bridge implementations. No deprecated or macOS-unavailable symbols were filtered; all symbols are API_AVAILABLE(macos(12.0)).
+Comprehensive audit of MailKit.framework public surface (top-level symbols only) against the mailkit-rs crate wrapper. All 32 public symbols from the SDK are verified as present in the crate's Rust and Swift bridge implementations. The optional `async_api` module also exposes executor-agnostic futures for the relevant completion-handler members on compose-session, message-security, and extension-manager surfaces. No deprecated or macOS-unavailable symbols were filtered; all symbols are API_AVAILABLE(macos(12.0)).
 
 ## 🟢 VERIFIED
 | Symbol | Kind | Header | Wrapped by |
@@ -33,7 +33,7 @@ Comprehensive audit of MailKit.framework public surface (top-level symbols only)
 | MEMessageActionHandler | protocol | MEMessageActionHandler.h | `MessageActionHandler`, `MessageActionExtension` |
 | MEMessageActionMessageColor | enum | MEMessageAction.h | `MessageColor` |
 | MEMessageDecoder | protocol | MEMessageDecoder.h | `MessageSecurityHandlerDelegate::decoded_message_for_message_data` |
-| MEMessageEncoder | protocol | MEMessageEncoder.h | `MessageSecurityHandlerDelegate::encode_message` |
+| MEMessageEncoder | protocol | MEMessageEncoder.h | `MessageSecurityHandlerDelegate::encoding_status_for_message`, `MessageSecurityHandlerDelegate::encode_message` |
 | MEMessageEncodingResult | class | MEMessageEncodingResult.h | `MessageEncodingResult` |
 | MEMessageEncryptionState | enum | MEMessage.h | `MessageEncryptionState` |
 | MEMessageSecurityErrorCode | enum | MEMessageSecurityHandler.h | `MessageSecurityErrorCode` |

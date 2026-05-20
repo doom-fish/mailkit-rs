@@ -15,6 +15,7 @@ typedef void *(*mail_message_security_decode_callback)(void *data_box, void *use
 typedef void *(*mail_message_security_encode_callback)(void *message_box, void *context_box, void *user_data, char **error_out);
 typedef void *(*mail_message_security_controller_callback)(void *json_box, void *user_data, char **error_out);
 typedef void (*mail_release_user_data_callback)(void *user_data);
+typedef void (*mail_async_callback)(const void *result, const char *error, void *ctx);
 
 void mail_object_release(void *ptr);
 void *mail_json_box_new(const char *json);
@@ -205,6 +206,47 @@ int32_t mail_extension_manager_reload_content_blocker(
     const char *identifier,
     uint64_t timeout_millis,
     char **error_out
+);
+
+void mail_message_action_decision_async(void *message_box, mail_async_callback cb, void *ctx);
+void mail_content_blocker_content_rules_async(void *blocker, mail_async_callback cb, void *ctx);
+void mail_compose_session_handler_annotate_addresses_async(
+    void *handler,
+    void *session,
+    mail_async_callback cb,
+    void *ctx
+);
+void mail_compose_session_handler_allow_message_send_async(
+    void *handler,
+    void *session,
+    mail_async_callback cb,
+    void *ctx
+);
+void mail_message_security_handler_encoding_status_async(
+    void *handler,
+    void *message_box,
+    void *context_box,
+    mail_async_callback cb,
+    void *ctx
+);
+void mail_message_security_handler_encode_message_async(
+    void *handler,
+    void *message_box,
+    void *context_box,
+    mail_async_callback cb,
+    void *ctx
+);
+void mail_message_security_handler_primary_action_clicked_async(
+    void *handler,
+    void *context_box,
+    mail_async_callback cb,
+    void *ctx
+);
+void mail_extension_manager_reload_visible_messages_async(mail_async_callback cb, void *ctx);
+void mail_extension_manager_reload_content_blocker_async(
+    const char *identifier,
+    mail_async_callback cb,
+    void *ctx
 );
 
 #endif

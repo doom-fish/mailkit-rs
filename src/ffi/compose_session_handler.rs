@@ -7,6 +7,7 @@ pub type ComposeSessionControllerCallback =
 pub type ComposeSessionJsonCallback =
     extern "C" fn(*mut c_void, *mut c_void, *mut *mut c_char) -> *mut c_void;
 pub type ReleaseUserDataCallback = extern "C" fn(*mut c_void);
+pub type AsyncComposeSessionCallback = extern "C" fn(*const c_void, *const i8, *mut c_void);
 
 unsafe extern "C" {
     pub fn mail_compose_session_new(
@@ -60,4 +61,17 @@ unsafe extern "C" {
         session: *mut c_void,
         error_out: *mut *mut c_char,
     ) -> *mut c_void;
+
+    pub fn mail_compose_session_handler_annotate_addresses_async(
+        handler: *mut c_void,
+        session: *mut c_void,
+        cb: AsyncComposeSessionCallback,
+        ctx: *mut c_void,
+    );
+    pub fn mail_compose_session_handler_allow_message_send_async(
+        handler: *mut c_void,
+        session: *mut c_void,
+        cb: AsyncComposeSessionCallback,
+        ctx: *mut c_void,
+    );
 }

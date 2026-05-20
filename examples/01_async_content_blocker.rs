@@ -16,6 +16,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("Available async APIs:");
         println!("  - AsyncContentBlocker::content_rules_json()");
         println!("  - AsyncMessageActionDecision::decide()");
+        println!("  - AsyncComposeSessionHandler::annotate_addresses_for_session()");
+        println!("  - AsyncComposeSessionHandler::allow_message_send_for_session()");
+        println!("  - AsyncMessageSecurityHandler::encoding_status_for_message()");
+        println!("  - AsyncMessageSecurityHandler::encode_message()");
+        println!("  - AsyncMessageSecurityHandler::primary_action_clicked_for_message_context()");
+        println!("  - AsyncExtensionManager::reload_visible_messages()");
+        println!("  - AsyncExtensionManager::reload_content_blocker()");
         println!();
 
         println!("Example: Creating a content blocker provider");
@@ -27,6 +34,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("For extension-specific async operations, use:");
         println!("  - async_api::AsyncContentBlocker");
         println!("  - async_api::AsyncMessageActionDecision");
+        println!("  - async_api::AsyncComposeSessionHandler");
+        println!("  - async_api::AsyncMessageSecurityHandler");
+        println!("  - async_api::AsyncExtensionManager");
 
         Ok(())
     })

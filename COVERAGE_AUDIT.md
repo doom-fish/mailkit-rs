@@ -1,6 +1,8 @@
-# mailkit-rs coverage audit (vs MacOSX26.2.sdk)
+# mailkit-rs coverage audit (vs MacOSX26.5.sdk)
 
 Scope: top-level macOS-available public MailKit symbols (interfaces, protocols, enums, and exported constants) from `MailKit.framework/Headers`. Member-level method/property coverage is already documented in `COVERAGE.md`.
+
+The optional `async_api` module now also covers the completion-handler members on `MEComposeSessionHandler`, `MEMessageSecurityHandler` / `MEMessageEncoder`, and `MEExtensionManager` with executor-agnostic futures.
 
 SDK_PUBLIC_SYMBOLS: 32
 VERIFIED: 32

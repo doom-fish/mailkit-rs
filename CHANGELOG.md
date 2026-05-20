@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.3.6] - 2026-05-20
+
+### Added
+- Added executor-agnostic async wrappers for compose-session address annotations and send validation.
+- Added executor-agnostic async wrappers for message-security encoding status, message encoding, and primary-action handling.
+- Added executor-agnostic async wrappers for `MEExtensionManager` reload requests.
+
+### Notes
+- Updated async tests/examples plus coverage docs for the expanded MailKit async surface audited against MacOSX26.5.sdk.
+- Phase 32 completeness + async sweep.
+
 ## [0.3.5] - 2026-05-20
 
 - Clippy hygiene sweep: cleared all `-D warnings` lints across the crate. No public API change.

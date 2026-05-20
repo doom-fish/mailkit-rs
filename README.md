@@ -2,7 +2,7 @@
 
 Safe Rust bindings for Apple’s [MailKit](https://developer.apple.com/documentation/mailkit) framework on macOS 13+.
 
-> **Status:** `v0.3.0` adds an async API (Tier 1) with Future-typed wrappers for callback-based Swift async operations. The crate covers the public MailKit headers shipped with the macOS SDK and adds headless test harnesses for the Mail-hosted protocols. The crate also ships helper layers for parsing `Authentication-Results` headers and RFC822/EML attachments from `MEMessage.rawData`, because MailKit doesn’t expose public `MEAuthenticationResult` or `EMLAttachment` types.
+> **Status:** `v0.3.6` expands the async API (Tier 1) with executor-agnostic futures for compose-session validation, message-security callbacks, and extension-manager reloads. The crate covers the public MailKit headers audited against the macOS 26.5 SDK and adds headless test harnesses for the Mail-hosted protocols. The crate also ships helper layers for parsing `Authentication-Results` headers and RFC822/EML attachments from `MEMessage.rawData`, because MailKit doesn’t expose public `MEAuthenticationResult` or `EMLAttachment` types.
 
 ## Highlights
 
@@ -12,7 +12,8 @@ Safe Rust bindings for Apple’s [MailKit](https://developer.apple.com/documenta
 - Helper parsers for `Authentication-Results` headers and MIME attachments embedded in raw RFC822 message data
 - `ExtensionManager` helpers for `reloadVisibleMessages` and `reloadContentBlocker(withIdentifier:)`
 
-- **Async API** (Tier 1, opt-in `async` feature) with `AsyncMessageActionDecision` and `AsyncContentBlocker`
+- **Async API** (Tier 1, opt-in `async` feature) with `AsyncMessageActionDecision`, `AsyncContentBlocker`, `AsyncComposeSessionHandler`, `AsyncMessageSecurityHandler`, and `AsyncExtensionManager`
+
 ## Quick start
 
 ```rust,no_run
@@ -55,6 +56,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
+## Async API
+
+Enable the optional `async` feature to access executor-agnostic futures for:
+
+- `AsyncMessageActionDecision::decide`
+- `AsyncContentBlocker::content_rules_json`
+- `AsyncComposeSessionHandler::{annotate_addresses_for_session, allow_message_send_for_session}`
+- `AsyncMessageSecurityHandler::{encoding_status_for_message, encode_message, primary_action_clicked_for_message_context}`
+- `AsyncExtensionManager::{reload_visible_messages, reload_content_blocker}`
+
 ## Headless examples
 
 The crate includes numbered examples for each logical area requested in the audit:
@@ -74,6 +85,12 @@ Run all examples with:
 
 ```bash
 for ex in examples/*.rs; do cargo run --example "$(basename "$ex" .rs)"; done
+```
+
+Run the async surface example with:
+
+```bash
+cargo run --example 01_async_content_blocker --features async
 ```
 
 ## Coverage audit
