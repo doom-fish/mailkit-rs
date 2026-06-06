@@ -10,18 +10,17 @@ func mail_message_action_decision_async(
     ctx: UnsafeMutableRawPointer
 ) {
     Task {
-        do {
-            // Note: This is a stub implementation. In a real extension, you would:
-            // decode the message from messageBox
-            // let decision = try await MEMessageActionHandler.decide(...)
-            // Then return the decision via callback
-            
-            let error = "Not implemented in non-extension context".withCString { $0 }
-            cb(nil, error, ctx)
-        } catch {
-            error.localizedDescription.withCString { errorCStr in
-                cb(nil, errorCStr, ctx)
-            }
+        // Note: This is a stub implementation. In a real extension, you would:
+        // decode the message from messageBox
+        // let decision = try await MEMessageActionHandler.decide(...)
+        // Then return the decision via callback
+        //
+        // The error C-string must only be produced and consumed *inside* the
+        // `withCString` closure: the pointer it yields is deallocated as soon
+        // as the closure returns, so escaping it (e.g. `let e = ....withCString { $0 }`)
+        // and passing it to `cb` afterwards is a use-after-free across FFI.
+        "Not implemented in non-extension context".withCString { errorCStr in
+            cb(nil, errorCStr, ctx)
         }
     }
 }
