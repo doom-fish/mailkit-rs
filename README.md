@@ -2,7 +2,14 @@
 
 Safe Rust bindings for Apple’s [MailKit](https://developer.apple.com/documentation/mailkit) framework on macOS 13+.
 
-> **Status:** `v0.3.6` expands the async API (Tier 1) with executor-agnostic futures for compose-session validation, message-security callbacks, and extension-manager reloads. The crate covers the public MailKit headers audited against the macOS 26.5 SDK and adds headless test harnesses for the Mail-hosted protocols. The crate also ships helper layers for parsing `Authentication-Results` headers and RFC822/EML attachments from `MEMessage.rawData`, because MailKit doesn’t expose public `MEAuthenticationResult` or `EMLAttachment` types.
+> **Status:** `v0.4.0` makes the message-security bridge fail closed, passes raw MIME data across the bridge as bytes, implements the async message-action and content-blocker futures, and lets `RustMailExtension` serve as a Mail extension's principal class. The crate covers the public MailKit headers audited against the macOS 26.5 SDK (the 27.0 SDK adds nothing to MailKit) and adds headless test harnesses for the Mail-hosted protocols. The crate also ships helper layers for parsing `Authentication-Results` headers and RFC822/EML attachments from `MEMessage.rawData`, because MailKit doesn’t expose public `MEAuthenticationResult` or `EMLAttachment` types.
+
+```toml
+[dependencies]
+mailkit-rs = "0.4"
+```
+
+The library is imported as `mailkit`.
 
 ## Highlights
 
