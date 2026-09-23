@@ -25,7 +25,7 @@ final class RustContentBlocker: NSObject, MEContentBlocker {
         releaseCallback(userData)
     }
 
-    fileprivate func contentRulesBytes() throws -> [UInt8] {
+    func contentRulesBytes() throws -> [UInt8] {
         var errorPtr: UnsafeMutablePointer<CChar>?
         let result = contentRulesCallback(userData, &errorPtr)
         if let message = mailTakeCString(errorPtr) {

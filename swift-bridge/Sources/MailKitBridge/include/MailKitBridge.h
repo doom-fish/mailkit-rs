@@ -213,7 +213,7 @@ int32_t mail_extension_manager_reload_content_blocker(
     char **error_out
 );
 
-void mail_message_action_decision_async(void *message_box, mail_async_callback cb, void *ctx);
+void mail_message_action_decision_async(void *handler, void *message_box, mail_async_callback cb, void *ctx);
 void mail_content_blocker_content_rules_async(void *blocker, mail_async_callback cb, void *ctx);
 void mail_compose_session_handler_annotate_addresses_async(
     void *handler,

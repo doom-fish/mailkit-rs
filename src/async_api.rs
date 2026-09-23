@@ -13,19 +13,14 @@
 //! | [`AsyncMessageSecurityHandler`] | Async message-security encoding and UI hooks |
 //! | [`AsyncExtensionManager`] | Async extension-manager reload requests |
 //!
-//! ## Limitations
+//! ## What the futures do
 //!
-//! `MailKit` is primarily intended for use in Mail extensions rather than regular processes.
-//! Most async operations below are available in extension contexts only:
-//!
-//! - **`ContentBlocker.contentRulesURL()`** — Extension API only (macOS 12.0+)
-//! - **`MEMessageActionHandler.decide()`** — Extension API only (macOS 12.0+)
-//! - **`MEComposeSessionHandler`** — Extension API only (macOS 14.0+)
-//! - **`MEMessageEncoder` / `MEMessageSecurityHandler` completion handlers** — Extension APIs (macOS 12.0+)
-//! - **`MEExtensionManager.reloadVisibleMessages` / `reloadContentBlocker`** — Mail-hosted APIs (macOS 12.0+)
-//!
-//! The Rust async wrappers below can still be useful for **testing and prototyping** in
-//! regular processes when the underlying Swift async methods are available.
+//! Mail calls an extension's handlers, never the other way round. Apart from
+//! [`AsyncExtensionManager`], these futures drive a Rust handler through the
+//! same Swift bridge code Mail uses and resolve as soon as the handler returns,
+//! so they work in tests and ordinary processes. [`AsyncExtensionManager`]
+//! calls `MEExtensionManager`, which only does something inside a
+//! Mail-hosted extension.
 //!
 //! ## Runtime Agnostic Design
 //!
@@ -41,13 +36,12 @@
 //!
 //! ```rust,ignore
 //! use mailkit::async_api::AsyncMessageActionDecision;
-//! use mailkit::Message;
+//! use mailkit::{Message, MessageActionExtension};
 //!
-//! // Create a message (typically from extension context)
 //! async {
-//!     let decision = AsyncMessageActionDecision::decide(&message).await?;
-//!     if let Some(decision) = decision {
-//!         println!("Got decision");
+//!     let extension = MessageActionExtension::new(handler)?;
+//!     if let Some(decision) = AsyncMessageActionDecision::decide(&extension, &message).await? {
+//!         println!("{:?}", decision.kind());
 //!     }
 //!     Ok::<(), Box<dyn std::error::Error>>(())
 //! }
@@ -55,7 +49,9 @@
 
 use crate::compose_session_handler::ComposeSession;
 use crate::error::{MailKitError, NSErrorInfo};
-use crate::private::{encode_json_box, encode_message_and_context_boxes, to_cstring};
+use crate::private::{
+    encode_json_box, encode_message_and_context_boxes, encode_message_box, to_cstring,
+};
 use doom_fish_utils::completion::{error_from_cstr, AsyncCompletion, AsyncCompletionFuture};
 use std::ffi::c_void;
 use std::future::Future;
@@ -78,30 +74,30 @@ extern "C" fn message_action_decision_callback(
         if !error.is_null() {
             let error_msg = unsafe { error_from_cstr(error) };
             unsafe {
-                AsyncCompletion::<crate::action::MessageActionDecision>::complete_err(
+                AsyncCompletion::<Option<crate::action::MessageActionDecision>>::complete_err(
                     user_data, error_msg,
                 );
             }
-        } else if !result.is_null() {
+        } else if result.is_null() {
+            unsafe {
+                AsyncCompletion::complete_ok(
+                    user_data,
+                    None::<crate::action::MessageActionDecision>,
+                );
+            }
+        } else {
             let decision =
                 unsafe { crate::action::MessageActionDecision::from_box_raw(result.cast_mut()) };
             match decision {
                 Ok(dec) => unsafe {
-                    AsyncCompletion::complete_ok(user_data, dec);
+                    AsyncCompletion::complete_ok(user_data, Some(dec));
                 },
                 Err(e) => unsafe {
-                    AsyncCompletion::<crate::action::MessageActionDecision>::complete_err(
+                    AsyncCompletion::<Option<crate::action::MessageActionDecision>>::complete_err(
                         user_data,
                         e.to_string(),
                     );
                 },
-            }
-        } else {
-            unsafe {
-                AsyncCompletion::<crate::action::MessageActionDecision>::complete_err(
-                    user_data,
-                    "Unknown error".to_string(),
-                );
             }
         }
     }));
@@ -109,7 +105,7 @@ extern "C" fn message_action_decision_callback(
 
 /// Future returned by `AsyncMessageActionDecision::decide`.
 pub struct MessageActionDecisionFuture {
-    inner: AsyncCompletionFuture<crate::action::MessageActionDecision>,
+    inner: AsyncCompletionFuture<Option<crate::action::MessageActionDecision>>,
 }
 
 impl Future for MessageActionDecisionFuture {
@@ -118,7 +114,7 @@ impl Future for MessageActionDecisionFuture {
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         Pin::new(&mut self.inner)
             .poll(cx)
-            .map(|r| r.map(Some).map_err(MailKitError::FrameworkError))
+            .map(|r| r.map_err(MailKitError::FrameworkError))
     }
 }
 
@@ -126,15 +122,17 @@ impl Future for MessageActionDecisionFuture {
 pub struct AsyncMessageActionDecision;
 
 impl AsyncMessageActionDecision {
-    /// Asynchronously decide an action for a message (extension API)
-    pub fn decide(message: &crate::message::Message) -> MessageActionDecisionFuture {
+    /// Runs the handler's `decide_action_for_message` through the bridge.
+    pub fn decide(
+        handler: &crate::message_action_extension::MessageActionExtension,
+        message: &crate::message::Message,
+    ) -> MessageActionDecisionFuture {
         let (future, ctx) = AsyncCompletion::create();
-        let message_info = message.info().clone();
-        let message_box = match crate::private::encode_json_box(&message_info) {
+        let message_box = match encode_message_box(message.info()) {
             Ok(b) => b,
             Err(e) => {
                 unsafe {
-                    AsyncCompletion::<crate::action::MessageActionDecision>::complete_err(
+                    AsyncCompletion::<Option<crate::action::MessageActionDecision>>::complete_err(
                         ctx,
                         e.to_string(),
                     );
@@ -145,6 +143,7 @@ impl AsyncMessageActionDecision {
 
         unsafe {
             crate::ffi::message_action_extension::mail_message_action_decision_async(
+                handler.raw(),
                 message_box,
                 message_action_decision_callback,
                 ctx,
@@ -208,7 +207,7 @@ impl Future for ContentBlockerContentRulesFuture {
 pub struct AsyncContentBlocker;
 
 impl AsyncContentBlocker {
-    /// Asynchronously retrieve content rules from a content blocker (extension API)
+    /// Returns the rules JSON produced by the blocker's provider.
     pub fn content_rules_json(
         content_blocker: &crate::content_blocker::ContentBlocker,
     ) -> ContentBlockerContentRulesFuture {
@@ -517,18 +516,16 @@ impl AsyncMessageSecurityHandler {
         compose_context: &crate::compose_session_handler::ComposeContext,
     ) -> MessageSecurityEncodingStatusFuture {
         let (future, ctx) = AsyncCompletion::create();
-        let (message_box, context_box) = match encode_message_and_context_boxes(
-            message.info(),
-            compose_context.info(),
-        ) {
-            Ok(boxes) => boxes,
-            Err(error) => {
-                complete_async_setup_error::<crate::security::OutgoingMessageEncodingStatus>(
-                    ctx, &error,
-                );
-                return MessageSecurityEncodingStatusFuture { inner: future };
-            }
-        };
+        let (message_box, context_box) =
+            match encode_message_and_context_boxes(message.info(), compose_context.info()) {
+                Ok(boxes) => boxes,
+                Err(error) => {
+                    complete_async_setup_error::<crate::security::OutgoingMessageEncodingStatus>(
+                        ctx, &error,
+                    );
+                    return MessageSecurityEncodingStatusFuture { inner: future };
+                }
+            };
 
         unsafe {
             crate::ffi::security::mail_message_security_handler_encoding_status_async(
@@ -550,16 +547,16 @@ impl AsyncMessageSecurityHandler {
         compose_context: &crate::compose_session_handler::ComposeContext,
     ) -> MessageSecurityEncodeMessageFuture {
         let (future, ctx) = AsyncCompletion::create();
-        let (message_box, context_box) = match encode_message_and_context_boxes(
-            message.info(),
-            compose_context.info(),
-        ) {
-            Ok(boxes) => boxes,
-            Err(error) => {
-                complete_async_setup_error::<crate::security::MessageEncodingResult>(ctx, &error);
-                return MessageSecurityEncodeMessageFuture { inner: future };
-            }
-        };
+        let (message_box, context_box) =
+            match encode_message_and_context_boxes(message.info(), compose_context.info()) {
+                Ok(boxes) => boxes,
+                Err(error) => {
+                    complete_async_setup_error::<crate::security::MessageEncodingResult>(
+                        ctx, &error,
+                    );
+                    return MessageSecurityEncodeMessageFuture { inner: future };
+                }
+            };
 
         unsafe {
             crate::ffi::security::mail_message_security_handler_encode_message_async(

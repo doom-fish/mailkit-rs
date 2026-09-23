@@ -5,7 +5,8 @@ mod support;
 use std::collections::BTreeMap;
 
 use mailkit::async_api::{
-    AsyncComposeSessionHandler, AsyncExtensionManager, AsyncMessageSecurityHandler,
+    AsyncComposeSessionHandler, AsyncContentBlocker, AsyncExtensionManager,
+    AsyncMessageActionDecision, AsyncMessageSecurityHandler,
 };
 use mailkit::prelude::*;
 use mailkit::{
@@ -217,6 +218,98 @@ fn test_async_extension_manager_api_surface_is_available() {
         AsyncExtensionManager::reload_visible_messages;
     let _: fn(&str) -> mailkit::async_api::ReloadContentBlockerFuture =
         AsyncExtensionManager::reload_content_blocker;
+}
+
+struct DecidingHandler {
+    decision: Option<MessageActionKind>,
+}
+
+impl MessageActionHandler for DecidingHandler {
+    fn decide_action_for_message(
+        &self,
+        message: &mailkit::Message,
+    ) -> Result<Option<MessageActionDecision>, mailkit::MailKitError> {
+        if message.info().raw_data != support::sample_message_info().raw_data {
+            return Err(mailkit::MailKitError::InvalidArgument(
+                "raw data did not arrive".into(),
+            ));
+        }
+        match self.decision {
+            Some(MessageActionKind::MoveToJunk) => Ok(Some(MessageActionDecision::action(
+                &MessageAction::move_to_junk()?,
+            )?)),
+            Some(_) => Err(mailkit::MailKitError::FrameworkError(
+                "rules unavailable".into(),
+            )),
+            None => Ok(None),
+        }
+    }
+}
+
+#[test]
+fn test_async_message_action_decision_runs_the_handler() {
+    let message = support::sample_message();
+
+    let junk = MessageActionExtension::new(DecidingHandler {
+        decision: Some(MessageActionKind::MoveToJunk),
+    })
+    .expect("message action extension");
+    let decision = pollster::block_on(AsyncMessageActionDecision::decide(&junk, &message))
+        .expect("decision result")
+        .expect("decision");
+    assert_eq!(
+        decision.kind(),
+        &MessageActionDecisionKind::Action(MessageActionKind::MoveToJunk)
+    );
+
+    let undecided = MessageActionExtension::new(DecidingHandler { decision: None })
+        .expect("message action extension");
+    assert!(
+        pollster::block_on(AsyncMessageActionDecision::decide(&undecided, &message))
+            .expect("decision result")
+            .is_none()
+    );
+
+    let failing = MessageActionExtension::new(DecidingHandler {
+        decision: Some(MessageActionKind::MarkAsRead),
+    })
+    .expect("message action extension");
+    let Err(error) = pollster::block_on(AsyncMessageActionDecision::decide(&failing, &message))
+    else {
+        panic!("the handler error must reach the future");
+    };
+    assert!(error.message().contains("rules unavailable"));
+}
+
+struct TrackerRules {
+    fail: bool,
+}
+
+const TRACKER_RULES: &[u8] = br#"[{"trigger":{"url-filter":"tracker"},"action":{"type":"block"}}]"#;
+
+impl ContentBlockerProvider for TrackerRules {
+    fn content_rules_json(&self) -> Result<Vec<u8>, mailkit::MailKitError> {
+        if self.fail {
+            Err(mailkit::MailKitError::FrameworkError(
+                "filter list missing".into(),
+            ))
+        } else {
+            Ok(TRACKER_RULES.to_vec())
+        }
+    }
+}
+
+#[test]
+fn test_async_content_blocker_returns_the_provider_rules() {
+    let blocker = ContentBlocker::new(TrackerRules { fail: false }).expect("blocker");
+    let rules = pollster::block_on(AsyncContentBlocker::content_rules_json(&blocker))
+        .expect("content rules");
+    assert_eq!(rules, TRACKER_RULES);
+
+    let failing = ContentBlocker::new(TrackerRules { fail: true }).expect("blocker");
+    let error = pollster::block_on(AsyncContentBlocker::content_rules_json(&failing))
+        .expect_err("provider error");
+    assert!(error.message().contains("filter list missing"));
 }
 
 struct FailingSecurityHandler;

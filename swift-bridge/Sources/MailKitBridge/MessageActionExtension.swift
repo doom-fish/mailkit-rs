@@ -33,7 +33,7 @@ final class RustMessageActionHandler: NSObject, MEMessageActionHandler {
         releaseCallback(userData)
     }
 
-    fileprivate func decisionBox(from messageBox: UnsafeMutableRawPointer) throws -> MailMessageActionDecisionBox? {
+    func decisionBox(from messageBox: UnsafeMutableRawPointer) throws -> MailMessageActionDecisionBox? {
         var errorPtr: UnsafeMutablePointer<CChar>?
         let result = decideCallback(messageBox, userData, &errorPtr)
         if let message = mailTakeCString(errorPtr) {

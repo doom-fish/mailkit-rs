@@ -29,6 +29,7 @@ unsafe extern "C" {
 
     // Async API
     pub fn mail_message_action_decision_async(
+        handler: *mut c_void,
         message_box: *mut c_void,
         cb: AsyncMessageActionDecisionCallback,
         ctx: *mut c_void,
