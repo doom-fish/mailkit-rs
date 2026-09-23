@@ -41,8 +41,8 @@ impl ContentBlocker {
                 Some(content_rules_callback),
                 Some(release_user_data),
                 user_data,
-                &mut raw,
-                &mut error_ptr,
+                &raw mut raw,
+                &raw mut error_ptr,
             )
         };
         if status != ffi::status::OK {
@@ -60,7 +60,7 @@ impl ContentBlocker {
         let result = unsafe {
             ffi::content_blocker::mail_content_blocker_test_content_rules_json(
                 self.raw,
-                &mut error_ptr,
+                &raw mut error_ptr,
             )
         };
         if !error_ptr.is_null() {

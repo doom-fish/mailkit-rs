@@ -185,8 +185,8 @@ impl DecodedMessageBanner {
                 title.as_ptr(),
                 primary_action_title.as_ptr(),
                 dismissable,
-                &mut raw,
-                &mut error_ptr,
+                &raw mut raw,
+                &raw mut error_ptr,
             )
         };
         if status != ffi::status::OK {
@@ -234,8 +234,8 @@ impl MessageSigner {
                 context_ptr,
                 context_len,
                 has_context,
-                &mut raw,
-                &mut error_ptr,
+                &raw mut raw,
+                &raw mut error_ptr,
             )
         };
         if status != ffi::status::OK {
@@ -293,8 +293,8 @@ impl MessageSecurityInformation {
                 localized_reason
                     .as_ref()
                     .map_or(ptr::null(), |reason| reason.as_ptr()),
-                &mut raw,
-                &mut error_ptr,
+                &raw mut raw,
+                &raw mut error_ptr,
             )
         };
         if status != ffi::status::OK {
@@ -341,8 +341,8 @@ impl DecodedMessage {
                 context_len,
                 has_context,
                 banner.map_or(ptr::null_mut(), |banner| banner.raw),
-                &mut raw,
-                &mut error_ptr,
+                &raw mut raw,
+                &raw mut error_ptr,
             )
         };
         if status != ffi::status::OK {
@@ -414,8 +414,8 @@ impl EncodedOutgoingMessage {
                 raw_data.len(),
                 encoding.is_signed,
                 encoding.is_encrypted,
-                &mut raw,
-                &mut error_ptr,
+                &raw mut raw,
+                &raw mut error_ptr,
             )
         };
         if status != ffi::status::OK {
@@ -464,8 +464,8 @@ impl OutgoingMessageEncodingStatus {
                     .map_or(ptr::null(), |json| json.as_ptr()),
                 raw_addresses.as_ptr(),
                 raw_addresses.len(),
-                &mut raw,
-                &mut error_ptr,
+                &raw mut raw,
+                &raw mut error_ptr,
             )
         };
         if status != ffi::status::OK {
@@ -553,8 +553,8 @@ impl MessageEncodingResult {
                 encryption_error_json
                     .as_ref()
                     .map_or(ptr::null(), |json| json.as_ptr()),
-                &mut raw,
-                &mut error_ptr,
+                &raw mut raw,
+                &raw mut error_ptr,
             )
         };
         if status != ffi::status::OK {

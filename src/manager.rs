@@ -22,7 +22,7 @@ impl ExtensionManager {
         let status = unsafe {
             ffi::mail_extension_manager_reload_visible_messages(
                 duration_to_millis(timeout),
-                &mut error_ptr,
+                &raw mut error_ptr,
             )
         };
         if status != ffi::status::OK {
@@ -47,7 +47,7 @@ impl ExtensionManager {
             ffi::mail_extension_manager_reload_content_blocker(
                 identifier.as_ptr(),
                 duration_to_millis(timeout),
-                &mut error_ptr,
+                &raw mut error_ptr,
             )
         };
         if status != ffi::status::OK {

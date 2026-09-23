@@ -173,7 +173,7 @@ impl ComposeSession {
     pub fn reload_session(&self) -> Result<(), MailKitError> {
         let mut error_ptr = ptr::null_mut();
         let status = unsafe {
-            ffi::compose_session_handler::mail_compose_session_reload(self.raw, &mut error_ptr)
+            ffi::compose_session_handler::mail_compose_session_reload(self.raw, &raw mut error_ptr)
         };
         if status != ffi::status::OK {
             return Err(from_swift(status, error_ptr));
@@ -314,8 +314,8 @@ impl ComposeSessionHandler {
                 Some(additional_headers_callback),
                 Some(release_user_data),
                 user_data,
-                &mut raw,
-                &mut error_ptr,
+                &raw mut raw,
+                &raw mut error_ptr,
             )
         };
         if status != ffi::status::OK {
@@ -362,7 +362,7 @@ impl ComposeSessionHandler {
             ffi::compose_session_handler::mail_compose_session_handler_test_view_controller(
                 self.raw,
                 session_raw,
-                &mut error_ptr,
+                &raw mut error_ptr,
             )
         };
         if !error_ptr.is_null() {
@@ -382,7 +382,7 @@ impl ComposeSessionHandler {
             ffi::compose_session_handler::mail_compose_session_handler_test_annotate_addresses(
                 self.raw,
                 session_raw,
-                &mut error_ptr,
+                &raw mut error_ptr,
             )
         };
         if !error_ptr.is_null() {
@@ -405,7 +405,7 @@ impl ComposeSessionHandler {
             ffi::compose_session_handler::mail_compose_session_handler_test_can_send_message(
                 self.raw,
                 session_raw,
-                &mut error_ptr,
+                &raw mut error_ptr,
             )
         };
         if !error_ptr.is_null() {
@@ -429,7 +429,7 @@ impl ComposeSessionHandler {
             ffi::compose_session_handler::mail_compose_session_handler_test_additional_headers(
                 self.raw,
                 session_raw,
-                &mut error_ptr,
+                &raw mut error_ptr,
             )
         };
         if !error_ptr.is_null() {
@@ -448,7 +448,7 @@ impl ComposeSessionHandler {
     ) -> Result<(), MailKitError> {
         let session_raw = ComposeSession::new_raw_from_info(session.info())?;
         let mut error_ptr = ptr::null_mut();
-        let status = unsafe { func(self.raw, session_raw, &mut error_ptr) };
+        let status = unsafe { func(self.raw, session_raw, &raw mut error_ptr) };
         if status != ffi::status::OK {
             return Err(from_swift(status, error_ptr));
         }

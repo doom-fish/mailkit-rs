@@ -52,8 +52,8 @@ impl MessageActionExtension {
                 Some(required_headers_callback),
                 Some(release_user_data),
                 user_data,
-                &mut raw,
-                &mut error_ptr,
+                &raw mut raw,
+                &raw mut error_ptr,
             )
         };
         if status != ffi::status::OK {
@@ -76,7 +76,7 @@ impl MessageActionExtension {
             ffi::message_action_extension::mail_message_action_extension_test_decide_action(
                 self.raw,
                 message_box,
-                &mut error_ptr,
+                &raw mut error_ptr,
             )
         };
         if !error_ptr.is_null() {
@@ -96,7 +96,7 @@ impl MessageActionExtension {
         let result = unsafe {
             ffi::message_action_extension::mail_message_action_extension_test_required_headers(
                 self.raw,
-                &mut error_ptr,
+                &raw mut error_ptr,
             )
         };
         if !error_ptr.is_null() {

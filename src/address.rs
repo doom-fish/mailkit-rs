@@ -56,8 +56,9 @@ impl EmailAddress {
         let raw_string = to_cstring(raw_string)?;
         let mut raw = ptr::null_mut();
         let mut error_ptr = ptr::null_mut();
-        let status =
-            unsafe { ffi::mail_email_address_new(raw_string.as_ptr(), &mut raw, &mut error_ptr) };
+        let status = unsafe {
+            ffi::mail_email_address_new(raw_string.as_ptr(), &raw mut raw, &raw mut error_ptr)
+        };
         if status != ffi::status::OK {
             return Err(from_swift(status, error_ptr));
         }

@@ -152,8 +152,8 @@ impl MailExtensionBuilder {
                 self.message_security_handler
                     .as_ref()
                     .map_or(ptr::null_mut(), MessageSecurityHandler::raw),
-                &mut raw,
-                &mut error_ptr,
+                &raw mut raw,
+                &raw mut error_ptr,
             )
         };
         if status != ffi::status::OK {

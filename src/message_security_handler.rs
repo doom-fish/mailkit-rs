@@ -128,8 +128,8 @@ impl MessageSecurityHandler {
                 Some(primary_action_callback),
                 Some(release_user_data),
                 user_data,
-                &mut raw,
-                &mut error_ptr,
+                &raw mut raw,
+                &raw mut error_ptr,
             )
         };
         if status != ffi::status::OK {
@@ -180,7 +180,7 @@ impl MessageSecurityHandler {
                 self.raw,
                 message_box,
                 context_box,
-                &mut error_ptr,
+                &raw mut error_ptr,
             )
         };
         if !error_ptr.is_null() {
@@ -203,7 +203,7 @@ impl MessageSecurityHandler {
                 self.raw,
                 message_box,
                 context_box,
-                &mut error_ptr,
+                &raw mut error_ptr,
             )
         };
         if !error_ptr.is_null() {
@@ -223,7 +223,7 @@ impl MessageSecurityHandler {
             ffi::security::mail_message_security_handler_test_view_controller_for_signers(
                 self.raw,
                 signers_box,
-                &mut error_ptr,
+                &raw mut error_ptr,
             )
         };
         if !error_ptr.is_null() {
@@ -246,7 +246,7 @@ impl MessageSecurityHandler {
             ffi::security::mail_message_security_handler_test_view_controller_for_message_context(
                 self.raw,
                 context_box,
-                &mut error_ptr,
+                &raw mut error_ptr,
             )
         };
         if !error_ptr.is_null() {
@@ -269,7 +269,7 @@ impl MessageSecurityHandler {
             ffi::security::mail_message_security_handler_test_primary_action_clicked(
                 self.raw,
                 context_box,
-                &mut error_ptr,
+                &raw mut error_ptr,
             )
         };
         if !error_ptr.is_null() {
