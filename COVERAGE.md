@@ -1,15 +1,15 @@
 # MailKit coverage audit
 
-Audited against `/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk/System/Library/Frameworks/MailKit.framework/Headers`.
+Audited against `/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk/System/Library/Frameworks/MailKit.framework/Headers`. The macOS 27.0 SDK's MailKit headers are identical.
 
 ## Requested logical-area mapping
 
 | Requested area | Public MailKit surface | Status | Notes |
 | --- | --- | --- | --- |
-| `MessageActionExtension` | `MEMessageActionHandler` + `MEExtension` | ✅ implemented | `MessageActionExtension` wraps the handler protocol; `MailExtension` bridges the principal extension protocol. |
+| `MessageActionExtension` | `MEMessageActionHandler` + `MEExtension` | ✅ implemented | `MessageActionExtension` wraps the handler protocol; `MailExtension` bridges the principal extension protocol, and `RustMailExtension` can be named as a real extension's `NSExtensionPrincipalClass` (see the README). |
 | `ComposeSessionHandler` | `MEComposeSessionHandler` + `MEComposeSession` + `MEComposeContext` | ✅ implemented | Includes synthetic session/context snapshots for headless tests and examples. |
 | `ContentBlocker` | `MEContentBlocker` | ✅ implemented | Also keeps `MEExtensionManager.reloadContentBlocker(withIdentifier:)`. |
-| `MessageSecurityHandler` | `MEMessageSecurityHandler` + `MEMessageEncoder` + `MEMessageDecoder` | ✅ implemented | Includes encode/decode test harnesses and view-controller hooks. |
+| `MessageSecurityHandler` | `MEMessageSecurityHandler` + `MEMessageEncoder` + `MEMessageDecoder` | ✅ implemented | Fails closed: delegate errors and panics reach Mail as `MEMessageSecurityErrorDomain` errors. Includes encode/decode test harnesses and view-controller hooks. |
 | `EMLAttachment` | _no public MailKit type_ | ✅ helper | Implemented as `EmlAttachment` over `MEMessage.rawData`. MailKit only exposes raw RFC822 data. |
 | `MEMessage` | `MEMessage` | ✅ implemented | Read-only snapshot wrapper with helpers for auth results and attachments. |
 | `MEAddress` | `MEEmailAddress` + `MEAddressAnnotation` | ✅ mapped | MailKit uses `MEEmailAddress` / `MEAddressAnnotation` instead of a standalone `MEAddress` symbol. |
@@ -19,7 +19,7 @@ Audited against `/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.pla
 
 ## Async surface
 
-With the optional `async` feature enabled, `mailkit::async_api` exposes executor-agnostic futures for:
+With the optional `async` feature enabled, `mailkit::async_api` exposes executor-agnostic futures that drive the Rust handlers through the bridge (`AsyncExtensionManager` calls `MEExtensionManager` and only takes effect inside a Mail extension):
 
 - `AsyncMessageActionDecision::decide`
 - `AsyncContentBlocker::content_rules_json`
@@ -72,10 +72,10 @@ With the optional `async` feature enabled, `mailkit::async_api` exposes executor
 | `MEEncodedOutgoingMessage.h` | `MEEncodedOutgoingMessage.isSigned` | ✅ implemented | `EncodedOutgoingMessageInfo.encoding.is_signed`. |
 | `MEEncodedOutgoingMessage.h` | `MEEncodedOutgoingMessage.isEncrypted` | ✅ implemented | `EncodedOutgoingMessageInfo.encoding.is_encrypted`. |
 | `MEEncodedOutgoingMessage.h` | `MEEncodedOutgoingMessage.init(rawData:isSigned:isEncrypted:)` | ✅ implemented | `EncodedOutgoingMessage::new`. |
-| `MEExtension.h` | `MEExtension.handlerForComposeSession(_:)` | ✅ implemented | `MailExtension` Swift bridge advertises the selector when a compose handler is configured. |
-| `MEExtension.h` | `MEExtension.handlerForMessageActions()` | ✅ implemented | `MailExtension` Swift bridge advertises the selector when a message-action handler is configured. |
-| `MEExtension.h` | `MEExtension.handlerForContentBlocker()` | ✅ implemented | `MailExtension` Swift bridge advertises the selector when a content blocker is configured. |
-| `MEExtension.h` | `MEExtension.handlerForMessageSecurity()` | ✅ implemented | `MailExtension` Swift bridge advertises the selector when a message-security handler is configured. |
+| `MEExtension.h` | `MEExtension.handlerForComposeSession(_:)` | ✅ implemented | `MailExtension` Swift bridge advertises the selector when a compose handler is configured; `RustMailExtension` serves the handlers registered with `MailExtension::register_as_principal`. |
+| `MEExtension.h` | `MEExtension.handlerForMessageActions()` | ✅ implemented | `MailExtension` Swift bridge advertises the selector when a message-action handler is configured; `RustMailExtension` serves the handlers registered with `MailExtension::register_as_principal`. |
+| `MEExtension.h` | `MEExtension.handlerForContentBlocker()` | ✅ implemented | `MailExtension` Swift bridge advertises the selector when a content blocker is configured; `RustMailExtension` serves the handlers registered with `MailExtension::register_as_principal`. |
+| `MEExtension.h` | `MEExtension.handlerForMessageSecurity()` | ✅ implemented | `MailExtension` Swift bridge advertises the selector when a message-security handler is configured; `RustMailExtension` serves the handlers registered with `MailExtension::register_as_principal`. |
 | `MEExtensionManager.h` | `MEExtensionManager.reloadContentBlocker(withIdentifier:completionHandler:)` | ✅ implemented | `ExtensionManager::reload_content_blocker`; `async_api::AsyncExtensionManager::reload_content_blocker`. |
 | `MEExtensionManager.h` | `MEExtensionManager.reloadVisibleMessages(completionHandler:)` | ✅ implemented | `ExtensionManager::reload_visible_messages`; `async_api::AsyncExtensionManager::reload_visible_messages`. |
 | `MEExtensionViewController.h` | `MEExtensionViewController` | ✅ implemented | `ExtensionViewController::new` and handler round-trips. |
@@ -108,9 +108,9 @@ With the optional `async` feature enabled, `mailkit::async_api` exposes executor
 | `MEMessageActionDecision.h` | `MEMessageActionDecision.actions(_:)` | ✅ implemented | `MessageActionDecision::actions`. |
 | `MEMessageActionHandler.h` | `MEMessageActionHandler.decideAction(for:completionHandler:)` | ✅ implemented | `MessageActionHandler::decide_action_for_message`; `async_api::AsyncMessageActionDecision::decide`. |
 | `MEMessageActionHandler.h` | `MEMessageActionHandler.requiredHeaders` | ✅ implemented | `MessageActionHandler::required_headers`. |
-| `MEMessageDecoder.h` | `MEMessageDecoder.decodedMessage(forMessageData:)` | ✅ implemented | `MessageSecurityHandlerDelegate::decoded_message_for_message_data`. |
-| `MEMessageEncoder.h` | `MEMessageEncoder.getEncodingStatus(for:composeContext:completionHandler:)` | ✅ implemented | `MessageSecurityHandlerDelegate::encoding_status_for_message`; `async_api::AsyncMessageSecurityHandler::encoding_status_for_message`. |
-| `MEMessageEncoder.h` | `MEMessageEncoder.encode(_:composeContext:completionHandler:)` | ✅ implemented | `MessageSecurityHandlerDelegate::encode_message`; `async_api::AsyncMessageSecurityHandler::encode_message`. |
+| `MEMessageDecoder.h` | `MEMessageDecoder.decodedMessage(forMessageData:)` | ✅ implemented | `MessageSecurityHandlerDelegate::decoded_message_for_message_data`; the data arrives as raw bytes, and errors become a `DecodingError` Mail displays. |
+| `MEMessageEncoder.h` | `MEMessageEncoder.getEncodingStatus(for:composeContext:completionHandler:)` | ✅ implemented | `MessageSecurityHandlerDelegate::encoding_status_for_message`; `async_api::AsyncMessageSecurityHandler::encoding_status_for_message`. Errors become the status's `securityError`. |
+| `MEMessageEncoder.h` | `MEMessageEncoder.encode(_:composeContext:completionHandler:)` | ✅ implemented | `MessageSecurityHandlerDelegate::encode_message`; `async_api::AsyncMessageSecurityHandler::encode_message`. Errors, panics and unmet sign/encrypt requests become signing/encryption errors, never an empty "no encoding needed" result. |
 | `MEMessageEncodingResult.h` | `MEMessageEncodingResult.encodedMessage` | ✅ implemented | `MessageEncodingResultInfo.encoded_message`. |
 | `MEMessageEncodingResult.h` | `MEMessageEncodingResult.signingError` | ✅ implemented | `MessageEncodingResultInfo.signing_error`. |
 | `MEMessageEncodingResult.h` | `MEMessageEncodingResult.encryptionError` | ✅ implemented | `MessageEncodingResultInfo.encryption_error`. |

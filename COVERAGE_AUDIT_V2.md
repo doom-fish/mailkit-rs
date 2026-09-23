@@ -1,5 +1,7 @@
 # mailkit-rs coverage audit v2 (vs MacOSX26.5.sdk)
 
+The macOS 27.0 SDK's MailKit headers are identical to 26.5. The percentage counts top-level symbols only; member-level coverage is in `COVERAGE.md`.
+
 SDK_PUBLIC_SYMBOLS: 32
 VERIFIED: 32
 GAPS: 0

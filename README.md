@@ -58,13 +58,49 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## Async API
 
-Enable the optional `async` feature to access executor-agnostic futures for:
+Enable the optional `async` feature for executor-agnostic futures. Except for `AsyncExtensionManager`, they drive a Rust handler through the same bridge code Mail uses and resolve as soon as the handler returns, so they also work in tests and ordinary processes:
 
-- `AsyncMessageActionDecision::decide`
-- `AsyncContentBlocker::content_rules_json`
+- `AsyncMessageActionDecision::decide(&extension, &message)` resolves to the handler's `Option<MessageActionDecision>`
+- `AsyncContentBlocker::content_rules_json(&blocker)` resolves to the provider's rules JSON
 - `AsyncComposeSessionHandler::{annotate_addresses_for_session, allow_message_send_for_session}`
-- `AsyncMessageSecurityHandler::{encoding_status_for_message, encode_message, primary_action_clicked_for_message_context}`
-- `AsyncExtensionManager::{reload_visible_messages, reload_content_blocker}`
+- `AsyncMessageSecurityHandler::{encoding_status_for_message, encode_message, primary_action_clicked_for_message_context}`, with the same fail-closed results as the synchronous harness
+- `AsyncExtensionManager::{reload_visible_messages, reload_content_blocker}`, which call `MEExtensionManager` and only take effect inside a Mail extension
+
+## Message security fails closed
+
+`MessageSecurityHandler` never lets a failure look like "nothing to do" to Mail:
+
+- **Encoding.** Mail sends a message unchanged when the encoding result has no encoded message and no errors. An `Err` or panic from `encode_message`, or a result that leaves a requested signature or encryption undone without reporting an error, is replaced by a result with no encoded message and an `EncodingError` in `MEMessageSecurityErrorDomain` as its `signing_error` and/or `encryption_error`. Mail then shows the error and doesn't send the message. An empty result is only passed through when the compose context asks for neither signing nor encryption.
+- **Encoding status.** An `Err` or panic from `encoding_status_for_message` becomes a status that can neither sign nor encrypt, with an `EncodingError` as its `security_error`.
+- **Decoding.** Return `Ok(None)` when the extension isn't needed for a message. An `Err` or panic from `decoded_message_for_message_data` becomes a decoded message without raw data whose security information carries a `DecodingError`, so Mail shows the failure instead of the undecoded message.
+- The `MessageSecurityHandler` harness methods and their async counterparts return exactly what Mail receives, so these failure results arrive as `Ok` values rather than `Err`.
+
+Raw MIME data (`MEMessage.rawData`, the bytes Mail asks the decoder to decode, and decoded and encoded message bodies) crosses the bridge as raw bytes, not as JSON.
+
+## Hosting the handlers in a Mail extension
+
+Mail loads extensions as sandboxed, signed app extensions (`.appex`) embedded in a host app. The extension's `Info.plist` names an `NSExtensionPrincipalClass` that adopts `MEExtension`; Mail creates it with `init` and asks it for handlers. The Swift bridge provides that class under the Objective-C name `RustMailExtension`:
+
+1. Create a macOS app with a Mail Extension target in Xcode, and declare the capabilities you implement under `NSExtensionAttributes` as the template does.
+2. Build your handlers into a Rust `staticlib` that depends on `mailkit-rs`, link it into the extension target, and set `NSExtensionPrincipalClass` to `RustMailExtension`.
+3. Export an installer from the static library. When Mail creates `RustMailExtension` and nothing is registered yet, it looks up `mailkit_install_extension` with `dlsym`, calls it, and serves the registered handlers:
+
+   ```rust,ignore
+   #[no_mangle]
+   pub extern "C" fn mailkit_install_extension() {
+       let extension = mailkit::MailExtension::builder()
+           .with_message_security_handler(
+               mailkit::MessageSecurityHandler::new(MySecurityHandler).expect("handler"),
+           )
+           .build()
+           .expect("extension");
+       extension.register_as_principal().expect("register");
+   }
+   ```
+
+4. Keep the symbol in the linked extension: add `-u _mailkit_install_extension` to the target's Other Linker Flags. If rustc links the extension executable itself, reference the function from a `#[used]` static instead, for example `#[used] static KEEP: extern "C" fn() = mailkit_install_extension;`.
+
+You can also call `MailExtension::register_as_principal()` yourself before Mail first connects. Each registration replaces the previous one for principal instances created afterwards. Handlers run synchronously on the thread Mail calls them on, and `ExtensionManager` / `AsyncExtensionManager` only take effect inside the extension process.
 
 ## Headless examples
 

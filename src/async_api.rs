@@ -16,9 +16,9 @@
 //! ## What the futures do
 //!
 //! Mail calls an extension's handlers, never the other way round. Apart from
-//! [`AsyncExtensionManager`], these futures drive a Rust handler through the
+//! `AsyncExtensionManager`, these futures drive a Rust handler through the
 //! same Swift bridge code Mail uses and resolve as soon as the handler returns,
-//! so they work in tests and ordinary processes. [`AsyncExtensionManager`]
+//! so they work in tests and ordinary processes. `AsyncExtensionManager`
 //! calls `MEExtensionManager`, which only does something inside a
 //! Mail-hosted extension.
 //!
