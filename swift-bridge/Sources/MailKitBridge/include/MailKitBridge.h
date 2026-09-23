@@ -11,15 +11,18 @@ typedef void *(*mail_compose_session_json_callback)(void *session_box, void *use
 typedef void *(*mail_message_action_decision_callback)(void *message_box, void *user_data, char **error_out);
 typedef void *(*mail_message_action_headers_callback)(void *user_data, char **error_out);
 typedef void *(*mail_content_blocker_json_callback)(void *user_data, char **error_out);
-typedef void *(*mail_message_security_decode_callback)(void *data_box, void *user_data, char **error_out);
+typedef void *(*mail_message_security_decode_callback)(const uint8_t *bytes, size_t len, void *user_data, char **error_out);
 typedef void *(*mail_message_security_encode_callback)(void *message_box, void *context_box, void *user_data, char **error_out);
 typedef void *(*mail_message_security_controller_callback)(void *json_box, void *user_data, char **error_out);
 typedef void (*mail_release_user_data_callback)(void *user_data);
 typedef void (*mail_async_callback)(const void *result, const char *error, void *ctx);
+typedef void (*mail_byte_sink)(void *ctx, const uint8_t *bytes, size_t len);
 
 void mail_object_release(void *ptr);
 void *mail_json_box_new(const char *json);
 char *mail_json_box_copy(void *box);
+bool mail_json_box_set_payload(void *box, const char *key, const uint8_t *bytes, size_t len);
+void mail_box_copy_payload(void *box, const char *key, mail_byte_sink sink, void *ctx);
 char *mail_compose_session_error_domain_copy(void);
 char *mail_message_security_error_domain_copy(void);
 void *mail_extension_view_controller_new(void);
@@ -31,6 +34,7 @@ void *mail_message_action_decision_box_copy_value(void *box);
 void *mail_decoded_message_box_new(void *message, const char *json);
 char *mail_decoded_message_box_copy_json(void *box);
 void *mail_decoded_message_box_copy_value(void *box);
+void mail_decoded_message_box_copy_raw_data(void *box, mail_byte_sink sink, void *ctx);
 
 void *mail_outgoing_message_encoding_status_box_new(void *status, const char *json);
 char *mail_outgoing_message_encoding_status_box_copy_json(void *box);
@@ -39,6 +43,7 @@ void *mail_outgoing_message_encoding_status_box_copy_value(void *box);
 void *mail_message_encoding_result_box_new(void *result, const char *json);
 char *mail_message_encoding_result_box_copy_json(void *box);
 void *mail_message_encoding_result_box_copy_value(void *box);
+void mail_message_encoding_result_box_copy_raw_data(void *box, mail_byte_sink sink, void *ctx);
 
 int32_t mail_email_address_new(const char *raw_string, void **out_address, char **error_out);
 char *mail_email_address_raw_string(void *address);
@@ -71,7 +76,7 @@ int32_t mail_message_action_extension_new(
 void *mail_message_action_extension_test_decide_action(void *handler, void *message_box, char **error_out);
 void *mail_message_action_extension_test_required_headers(void *handler, char **error_out);
 
-int32_t mail_compose_session_new(const char *json, void **out_session, char **error_out);
+int32_t mail_compose_session_new(void *session_box, void **out_session, char **error_out);
 char *mail_compose_session_copy_json(void *session);
 int32_t mail_compose_session_reload(void *session, char **error_out);
 size_t mail_compose_session_reload_count(void *session);
@@ -194,7 +199,7 @@ int32_t mail_message_security_handler_new(
     void **out_handler,
     char **error_out
 );
-void *mail_message_security_handler_test_decode_message(void *handler, void *data_box, char **error_out);
+void *mail_message_security_handler_test_decode_message(void *handler, const uint8_t *bytes, size_t len, char **error_out);
 void *mail_message_security_handler_test_encoding_status(void *handler, void *message_box, void *context_box, char **error_out);
 void *mail_message_security_handler_test_encode_message(void *handler, void *message_box, void *context_box, char **error_out);
 void *mail_message_security_handler_test_view_controller_for_signers(void *handler, void *signers_box, char **error_out);

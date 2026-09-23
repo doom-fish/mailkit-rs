@@ -10,7 +10,10 @@ use crate::error::{from_swift, take_owned_c_string, MailKitError, NSErrorInfo};
 use crate::extension_view_controller::ExtensionViewController;
 use crate::ffi;
 use crate::message::{Message, MessageInfo};
-use crate::private::{encode_json, encode_json_box, write_error_out};
+use crate::private::{
+    box_payload, encode_compose_session_box, encode_json_box, write_error_out,
+    SESSION_ORIGINAL_RAW_DATA, SESSION_RAW_DATA,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -113,17 +116,20 @@ impl ComposeSession {
         })
     }
 
-    fn new_raw_from_info(info: &ComposeSessionInfo) -> Result<*mut c_void, MailKitError> {
-        let json = encode_json(info)?;
+    pub(crate) fn new_raw_from_info(
+        info: &ComposeSessionInfo,
+    ) -> Result<*mut c_void, MailKitError> {
+        let session_box = encode_compose_session_box(info)?;
         let mut raw = ptr::null_mut();
         let mut error_ptr = ptr::null_mut();
         let status = unsafe {
             ffi::compose_session_handler::mail_compose_session_new(
-                json.as_ptr(),
-                &mut raw,
-                &mut error_ptr,
+                session_box,
+                &raw mut raw,
+                &raw mut error_ptr,
             )
         };
+        unsafe { ffi::core::mail_object_release(session_box) };
         if status != ffi::status::OK {
             return Err(from_swift(status, error_ptr));
         }
@@ -139,11 +145,15 @@ impl ComposeSession {
         let json = take_owned_c_string(unsafe {
             ffi::compose_session_handler::mail_compose_session_copy_json(raw)
         });
-        let info = serde_json::from_str::<ComposeSessionInfo>(&json).map_err(|error| {
+        let mut info = serde_json::from_str::<ComposeSessionInfo>(&json).map_err(|error| {
             MailKitError::FrameworkError(format!(
                 "failed to decode MailKit compose session: {error}"
             ))
         })?;
+        info.mail_message.raw_data = unsafe { box_payload(raw, SESSION_RAW_DATA) };
+        if let Some(original) = info.compose_context.original_message.as_deref_mut() {
+            original.raw_data = unsafe { box_payload(raw, SESSION_ORIGINAL_RAW_DATA) };
+        }
         Ok(Self {
             raw,
             info,

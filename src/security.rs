@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use crate::address::{EmailAddress, EmailAddressInfo};
 use crate::error::{from_swift, take_owned_c_string, MailKitError, NSErrorInfo};
 use crate::ffi;
-use crate::private::{encode_json, optional_bytes_parts, to_cstring};
+use crate::private::{encode_json, optional_bytes_parts, read_bytes, to_cstring};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -369,7 +369,8 @@ impl DecodedMessage {
         mem::replace(&mut self.raw, ptr::null_mut())
     }
 
-    pub(crate) fn into_box_raw(self) -> Result<*mut c_void, MailKitError> {
+    pub(crate) fn into_box_raw(mut self) -> Result<*mut c_void, MailKitError> {
+        self.info.raw_data = None;
         let info_json = encode_json(&self.info)?;
         let box_raw =
             unsafe { ffi::core::mail_decoded_message_box_new(self.into_raw(), info_json.as_ptr()) };
@@ -389,11 +390,18 @@ impl DecodedMessage {
         }
         let info_json =
             take_owned_c_string(unsafe { ffi::core::mail_decoded_message_box_copy_json(box_raw) });
-        let info = serde_json::from_str::<DecodedMessageInfo>(&info_json).map_err(|error| {
-            MailKitError::FrameworkError(format!(
-                "failed to decode MailKit decoded-message box: {error}"
-            ))
-        })?;
+        let mut info = match serde_json::from_str::<DecodedMessageInfo>(&info_json) {
+            Ok(info) => info,
+            Err(error) => {
+                unsafe { ffi::core::mail_object_release(box_raw) };
+                return Err(MailKitError::FrameworkError(format!(
+                    "failed to decode MailKit decoded-message box: {error}"
+                )));
+            }
+        };
+        info.raw_data = read_bytes(|sink, context| unsafe {
+            ffi::core::mail_decoded_message_box_copy_raw_data(box_raw, sink, context);
+        });
         let raw = unsafe { ffi::core::mail_decoded_message_box_copy_value(box_raw) };
         unsafe { ffi::core::mail_object_release(box_raw) };
         Ok(Self { raw, info })
@@ -576,7 +584,10 @@ impl MessageEncodingResult {
         mem::replace(&mut self.raw, ptr::null_mut())
     }
 
-    pub(crate) fn into_box_raw(self) -> Result<*mut c_void, MailKitError> {
+    pub(crate) fn into_box_raw(mut self) -> Result<*mut c_void, MailKitError> {
+        if let Some(encoded) = self.info.encoded_message.as_mut() {
+            encoded.raw_data = Vec::new();
+        }
         let info_json = encode_json(&self.info)?;
         let box_raw = unsafe {
             ffi::core::mail_message_encoding_result_box_new(self.into_raw(), info_json.as_ptr())
@@ -598,12 +609,21 @@ impl MessageEncodingResult {
         let info_json = take_owned_c_string(unsafe {
             ffi::core::mail_message_encoding_result_box_copy_json(box_raw)
         });
-        let info =
-            serde_json::from_str::<MessageEncodingResultInfo>(&info_json).map_err(|error| {
-                MailKitError::FrameworkError(format!(
+        let mut info = match serde_json::from_str::<MessageEncodingResultInfo>(&info_json) {
+            Ok(info) => info,
+            Err(error) => {
+                unsafe { ffi::core::mail_object_release(box_raw) };
+                return Err(MailKitError::FrameworkError(format!(
                     "failed to decode MailKit message-encoding result box: {error}"
-                ))
-            })?;
+                )));
+            }
+        };
+        if let Some(encoded) = info.encoded_message.as_mut() {
+            encoded.raw_data = read_bytes(|sink, context| unsafe {
+                ffi::core::mail_message_encoding_result_box_copy_raw_data(box_raw, sink, context);
+            })
+            .unwrap_or_default();
+        }
         let raw = unsafe { ffi::core::mail_message_encoding_result_box_copy_value(box_raw) };
         unsafe { ffi::core::mail_object_release(box_raw) };
         Ok(Self { raw, info })
@@ -670,5 +690,73 @@ impl Drop for MessageEncodingResult {
             unsafe { ffi::mail_object_release(self.raw) };
             self.raw = ptr::null_mut();
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        DecodedMessage, EncodedOutgoingMessage, MessageEncoding, MessageEncodingResult,
+        MessageSecurityInformation, RemoteContentBlocking,
+    };
+    use crate::error::take_owned_c_string;
+    use crate::ffi;
+
+    fn mebibyte() -> Vec<u8> {
+        (0..=255u8).rev().cycle().take(1 << 20).collect()
+    }
+
+    #[test]
+    fn decoded_message_box_round_trips_raw_data_without_json() {
+        let raw = mebibyte();
+        let security = MessageSecurityInformation::new(
+            &[],
+            true,
+            None,
+            None,
+            RemoteContentBlocking {
+                should_block: false,
+                localized_reason: None,
+            },
+        )
+        .expect("security information");
+        let message =
+            DecodedMessage::new(Some(&raw), &security, Some(b"ctx"), None).expect("message");
+        let boxed = message.into_box_raw().expect("box");
+        let json =
+            take_owned_c_string(unsafe { ffi::core::mail_decoded_message_box_copy_json(boxed) });
+        assert!(json.len() < 1024);
+        let restored = unsafe { DecodedMessage::from_box_raw(boxed) }.expect("restored");
+        assert_eq!(restored.info().raw_data.as_deref(), Some(&raw[..]));
+        assert_eq!(restored.info().context.as_deref(), Some(&b"ctx"[..]));
+        assert!(restored.info().security_information.is_encrypted);
+    }
+
+    #[test]
+    fn encoding_result_box_round_trips_raw_data_without_json() {
+        let raw = mebibyte();
+        let encoded = EncodedOutgoingMessage::new(
+            &raw,
+            MessageEncoding {
+                is_signed: true,
+                is_encrypted: false,
+            },
+        )
+        .expect("encoded message");
+        let result = MessageEncodingResult::new(Some(&encoded), None, None).expect("result");
+        let boxed = result.into_box_raw().expect("box");
+        let json = take_owned_c_string(unsafe {
+            ffi::core::mail_message_encoding_result_box_copy_json(boxed)
+        });
+        assert!(json.len() < 1024);
+        let restored = unsafe { MessageEncodingResult::from_box_raw(boxed) }.expect("restored");
+        let restored = restored
+            .info()
+            .encoded_message
+            .as_ref()
+            .expect("encoded message");
+        assert_eq!(restored.raw_data, raw);
+        assert!(restored.encoding.is_signed);
+        assert!(!restored.encoding.is_encrypted);
     }
 }

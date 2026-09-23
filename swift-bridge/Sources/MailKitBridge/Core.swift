@@ -25,11 +25,32 @@ enum MailBridgeError: LocalizedError {
     }
 }
 
-final class MailJSONBox: NSObject {
-    let json: String
+typealias MailByteSink = @convention(c) (UnsafeMutableRawPointer?, UnsafePointer<UInt8>?, Int) -> Void
 
-    init(json: String) {
+protocol MailPayloadCarrier: AnyObject {
+    func mailPayload(forKey key: String) -> Data?
+}
+
+protocol MailPayloadSnapshot: Codable {
+    func payloads(prefix: String) -> [String: Data]
+    mutating func adoptPayloads(from carrier: MailPayloadCarrier, prefix: String)
+}
+
+final class MailJSONBox: NSObject, MailPayloadCarrier {
+    let json: String
+    private var payloads: [String: Data]
+
+    init(json: String, payloads: [String: Data] = [:]) {
         self.json = json
+        self.payloads = payloads
+    }
+
+    func mailPayload(forKey key: String) -> Data? {
+        payloads[key]
+    }
+
+    func setMailPayload(_ data: Data, forKey key: String) {
+        payloads[key] = data
     }
 }
 
@@ -127,6 +148,38 @@ func mailJSONBoxPointer<T: Encodable>(for value: T) throws -> UnsafeMutableRawPo
     mailRetainedPointer(MailJSONBox(json: try mailJSONString(from: value)))
 }
 
+func mailSnapshotBoxPointer<T: MailPayloadSnapshot>(for snapshot: T) throws -> UnsafeMutableRawPointer {
+    mailRetainedPointer(
+        MailJSONBox(json: try mailJSONString(from: snapshot), payloads: snapshot.payloads(prefix: ""))
+    )
+}
+
+func mailDecodeSnapshotBox<T: MailPayloadSnapshot>(_ ptr: UnsafeMutableRawPointer?, as _: T.Type) throws -> T {
+    guard let box = mailTakeObject(ptr, as: MailJSONBox.self) else {
+        throw MailBridgeError.invalidArgument("MailKit JSON box was null")
+    }
+    var snapshot = try JSONDecoder().decode(T.self, from: Data(box.json.utf8))
+    snapshot.adoptPayloads(from: box, prefix: "")
+    return snapshot
+}
+
+func mailEmit(_ data: Data?, to sink: MailByteSink?, context: UnsafeMutableRawPointer?) {
+    guard let data, let sink else {
+        return
+    }
+    data.withUnsafeBytes { raw in
+        sink(context, raw.baseAddress?.assumingMemoryBound(to: UInt8.self), raw.count)
+    }
+}
+
+func mailSecurityError(_ code: MEMessageSecurityError.Code, _ description: String) -> NSError {
+    NSError(
+        domain: MEMessageSecurityErrorDomain,
+        code: code.rawValue,
+        userInfo: [NSLocalizedDescriptionKey: description]
+    )
+}
+
 func mailSetError(_ errorOut: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?, _ value: String) {
     guard let errorOut else {
         return
@@ -221,6 +274,45 @@ func mail_json_box_copy(_ box: UnsafeMutableRawPointer?) -> UnsafeMutablePointer
     mailCopyString(mailTakeObject(box, as: MailJSONBox.self)?.json)
 }
 
+@_cdecl("mail_json_box_set_payload")
+func mail_json_box_set_payload(
+    _ box: UnsafeMutableRawPointer?,
+    _ key: UnsafePointer<CChar>?,
+    _ bytes: UnsafePointer<UInt8>?,
+    _ count: Int
+) -> Bool {
+    guard let box = mailTakeObject(box, as: MailJSONBox.self), let key, count >= 0 else {
+        return false
+    }
+    let data: Data
+    if count == 0 {
+        data = Data()
+    } else {
+        guard let bytes else {
+            return false
+        }
+        data = Data(bytes: bytes, count: count)
+    }
+    box.setMailPayload(data, forKey: String(cString: key))
+    return true
+}
+
+@_cdecl("mail_box_copy_payload")
+func mail_box_copy_payload(
+    _ box: UnsafeMutableRawPointer?,
+    _ key: UnsafePointer<CChar>?,
+    _ sink: MailByteSink?,
+    _ context: UnsafeMutableRawPointer?
+) {
+    guard let box,
+          let key,
+          let carrier = Unmanaged<AnyObject>.fromOpaque(box).takeUnretainedValue() as? MailPayloadCarrier
+    else {
+        return
+    }
+    mailEmit(carrier.mailPayload(forKey: String(cString: key)), to: sink, context: context)
+}
+
 @_cdecl("mail_message_action_decision_box_new")
 func mail_message_action_decision_box_new(
     _ decision: UnsafeMutableRawPointer?,
@@ -267,6 +359,15 @@ func mail_decoded_message_box_copy_value(_ box: UnsafeMutableRawPointer?) -> Uns
         return nil
     }
     return mailRetainedPointer(box.message)
+}
+
+@_cdecl("mail_decoded_message_box_copy_raw_data")
+func mail_decoded_message_box_copy_raw_data(
+    _ box: UnsafeMutableRawPointer?,
+    _ sink: MailByteSink?,
+    _ context: UnsafeMutableRawPointer?
+) {
+    mailEmit(mailTakeObject(box, as: MailDecodedMessageBox.self)?.message.rawData, to: sink, context: context)
 }
 
 @_cdecl("mail_outgoing_message_encoding_status_box_new")
@@ -317,6 +418,19 @@ func mail_message_encoding_result_box_copy_value(_ box: UnsafeMutableRawPointer?
         return nil
     }
     return mailRetainedPointer(box.result)
+}
+
+@_cdecl("mail_message_encoding_result_box_copy_raw_data")
+func mail_message_encoding_result_box_copy_raw_data(
+    _ box: UnsafeMutableRawPointer?,
+    _ sink: MailByteSink?,
+    _ context: UnsafeMutableRawPointer?
+) {
+    mailEmit(
+        mailTakeObject(box, as: MailMessageEncodingResultBox.self)?.result.encodedMessage?.rawData,
+        to: sink,
+        context: context
+    )
 }
 
 @_cdecl("mail_compose_session_error_domain_copy")

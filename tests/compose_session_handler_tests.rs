@@ -111,3 +111,83 @@ fn compose_session_handler_exposes_round_trip_behaviour() {
         ]
     );
 }
+
+type SeenRawData = Arc<Mutex<Option<(Option<Vec<u8>>, Option<Vec<u8>>)>>>;
+
+struct RawDataComposeHandler {
+    seen: SeenRawData,
+}
+
+impl ComposeSessionHandlerDelegate for RawDataComposeHandler {
+    fn mail_compose_session_did_begin(
+        &self,
+        session: &ComposeSession,
+    ) -> Result<(), mailkit::MailKitError> {
+        let info = session.info();
+        *self.seen.lock().expect("seen") = Some((
+            info.mail_message.raw_data.clone(),
+            info.compose_context
+                .original_message
+                .as_ref()
+                .and_then(|original| original.raw_data.clone()),
+        ));
+        Ok(())
+    }
+
+    fn mail_compose_session_did_end(
+        &self,
+        _session: &ComposeSession,
+    ) -> Result<(), mailkit::MailKitError> {
+        Ok(())
+    }
+
+    fn view_controller_for_session(
+        &self,
+        _session: &ComposeSession,
+    ) -> Result<ExtensionViewController, mailkit::MailKitError> {
+        ExtensionViewController::new()
+    }
+
+    fn additional_headers_for_session(
+        &self,
+        _session: &ComposeSession,
+    ) -> Result<BTreeMap<String, Vec<String>>, mailkit::MailKitError> {
+        Ok(BTreeMap::new())
+    }
+}
+
+#[test]
+fn compose_session_raw_data_reaches_the_handler_unchanged() {
+    let seen = Arc::new(Mutex::new(None));
+    let handler = ComposeSessionHandler::new(RawDataComposeHandler {
+        seen: Arc::clone(&seen),
+    })
+    .expect("compose handler");
+
+    let draft: Vec<u8> = (0..=255u8).cycle().take(300_000).collect();
+    let original: Vec<u8> = (0..=255u8).rev().cycle().take(70_000).collect();
+    let mut info = support::sample_compose_session_info();
+    info.mail_message.raw_data = Some(draft.clone());
+    info.compose_context
+        .original_message
+        .as_mut()
+        .expect("original message")
+        .raw_data = Some(original.clone());
+    let session = ComposeSession::new(info).expect("compose session");
+
+    handler
+        .mail_compose_session_did_begin(&session)
+        .expect("begin callback");
+    let (message_raw, original_raw) = seen.lock().expect("seen").take().expect("callback ran");
+    assert_eq!(message_raw.as_deref(), Some(&draft[..]));
+    assert_eq!(original_raw.as_deref(), Some(&original[..]));
+
+    let mut info = support::sample_compose_session_info();
+    info.mail_message.raw_data = None;
+    info.compose_context.original_message = None;
+    let session = ComposeSession::new(info).expect("compose session");
+    handler
+        .mail_compose_session_did_begin(&session)
+        .expect("begin callback");
+    assert_eq!(seen.lock().expect("seen").take(), Some((None, None)));
+}

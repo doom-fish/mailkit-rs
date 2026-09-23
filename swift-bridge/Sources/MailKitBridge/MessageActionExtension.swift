@@ -37,6 +37,7 @@ final class RustMessageActionHandler: NSObject, MEMessageActionHandler {
         var errorPtr: UnsafeMutablePointer<CChar>?
         let result = decideCallback(messageBox, userData, &errorPtr)
         if let message = mailTakeCString(errorPtr) {
+            mail_object_release(result)
             throw MailBridgeError.frameworkError(message)
         }
         guard let result else {
@@ -49,7 +50,7 @@ final class RustMessageActionHandler: NSObject, MEMessageActionHandler {
     }
 
     fileprivate func decisionBox(for snapshot: MailMessageSnapshot) throws -> MailMessageActionDecisionBox? {
-        let messageBox = try mailJSONBoxPointer(for: snapshot)
+        let messageBox = try mailSnapshotBoxPointer(for: snapshot)
         defer { mail_object_release(messageBox) }
         return try decisionBox(from: messageBox)
     }

@@ -5,8 +5,8 @@ use std::ptr;
 use crate::action::MessageActionDecision;
 use crate::error::{from_swift, MailKitError};
 use crate::ffi;
-use crate::message::{Message, MessageInfo};
-use crate::private::{decode_json_box_ref, encode_json_box, write_error_out};
+use crate::message::Message;
+use crate::private::{decode_message_box, encode_json_box, encode_message_box, write_error_out};
 
 /// Implements the callbacks MailKit expects from `MEMessageActionHandler`.
 pub trait MessageActionHandler: Send + Sync + 'static {
@@ -70,7 +70,7 @@ impl MessageActionExtension {
         &self,
         message: &Message,
     ) -> Result<Option<MessageActionDecision>, MailKitError> {
-        let message_box = encode_json_box(message.info())?;
+        let message_box = encode_message_box(message.info())?;
         let mut error_ptr = ptr::null_mut();
         let result = unsafe {
             ffi::message_action_extension::mail_message_action_extension_test_decide_action(
@@ -125,7 +125,7 @@ extern "C" fn decide_callback(
 ) -> *mut c_void {
     match catch_unwind(AssertUnwindSafe(|| {
         let state = unsafe { &*user_data.cast::<MessageActionHandlerState>() };
-        let info = unsafe { decode_json_box_ref::<MessageInfo>(message_box) }?;
+        let info = unsafe { decode_message_box(message_box) }?;
         let message = Message::new(info);
         state
             .handler

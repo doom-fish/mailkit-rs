@@ -17,7 +17,8 @@ func mailSnapshot(_ signer: MEMessageSigner) -> MailMessageSignerSnapshot {
 }
 
 typealias MailMessageSecurityDecodeCallback = @convention(c) (
-    UnsafeMutableRawPointer?,
+    UnsafePointer<UInt8>?,
+    Int,
     UnsafeMutableRawPointer?,
     UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
 ) -> UnsafeMutableRawPointer?
@@ -34,6 +35,117 @@ typealias MailMessageSecurityControllerCallback = @convention(c) (
     UnsafeMutableRawPointer?,
     UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
 ) -> UnsafeMutableRawPointer?
+
+struct MailRemoteContentSnapshot: Encodable {
+    let shouldBlock: Bool
+    let localizedReason: String?
+}
+
+struct MailSecurityInformationSnapshot: Encodable {
+    let signers: [MailMessageSignerSnapshot]
+    let isEncrypted: Bool
+    let signingError: NSErrorPayload?
+    let encryptionError: NSErrorPayload?
+    let remoteContent: MailRemoteContentSnapshot
+}
+
+struct MailFailedDecodedMessageSnapshot: Encodable {
+    let securityInformation: MailSecurityInformationSnapshot
+}
+
+struct MailCapabilitiesSnapshot: Encodable {
+    let canSign: Bool
+    let canEncrypt: Bool
+}
+
+struct MailFailedEncodingStatusSnapshot: Encodable {
+    let capabilities: MailCapabilitiesSnapshot
+    let securityError: NSErrorPayload
+    let addressesFailingEncryption: [MailEmailAddressSnapshot]
+}
+
+struct MailFailedEncodingResultSnapshot: Encodable {
+    let signingError: NSErrorPayload?
+    let encryptionError: NSErrorPayload?
+}
+
+func mailFailedDecodedMessageBox(_ description: String) -> MailDecodedMessageBox {
+    let error = mailSecurityError(.decodingError, description)
+    let payload = mailNSErrorPayload(error)
+    let information = MEMessageSecurityInformation(
+        signers: [],
+        isEncrypted: false,
+        signingError: error,
+        encryptionError: error,
+        shouldBlockRemoteContent: true,
+        localizedRemoteContentBlockingReason: nil
+    )
+    let snapshot = MailFailedDecodedMessageSnapshot(
+        securityInformation: MailSecurityInformationSnapshot(
+            signers: [],
+            isEncrypted: false,
+            signingError: payload,
+            encryptionError: payload,
+            remoteContent: MailRemoteContentSnapshot(shouldBlock: true, localizedReason: nil)
+        )
+    )
+    return MailDecodedMessageBox(
+        message: MEDecodedMessage(data: nil, securityInformation: information, context: nil),
+        json: (try? mailJSONString(from: snapshot)) ?? ""
+    )
+}
+
+func mailFailedEncodingStatusBox(_ description: String) -> MailOutgoingMessageEncodingStatusBox {
+    let error = mailSecurityError(.encodingError, description)
+    let snapshot = MailFailedEncodingStatusSnapshot(
+        capabilities: MailCapabilitiesSnapshot(canSign: false, canEncrypt: false),
+        securityError: mailNSErrorPayload(error),
+        addressesFailingEncryption: []
+    )
+    return MailOutgoingMessageEncodingStatusBox(
+        status: MEOutgoingMessageEncodingStatus(
+            canSign: false,
+            canEncrypt: false,
+            securityError: error,
+            addressesFailingEncryption: []
+        ),
+        json: (try? mailJSONString(from: snapshot)) ?? ""
+    )
+}
+
+func mailFailedEncodingResultBox(
+    _ description: String,
+    composeContext: MailComposeContextSnapshot
+) -> MailMessageEncodingResultBox {
+    let error = mailSecurityError(.encodingError, description)
+    let signingError = composeContext.shouldSign || !composeContext.shouldEncrypt ? error : nil
+    let encryptionError = composeContext.shouldEncrypt || !composeContext.shouldSign ? error : nil
+    let snapshot = MailFailedEncodingResultSnapshot(
+        signingError: signingError.map(mailNSErrorPayload),
+        encryptionError: encryptionError.map(mailNSErrorPayload)
+    )
+    return MailMessageEncodingResultBox(
+        result: MEMessageEncodingResult(
+            encodedMessage: nil,
+            signingError: signingError,
+            encryptionError: encryptionError
+        ),
+        json: (try? mailJSONString(from: snapshot)) ?? ""
+    )
+}
+
+func mailUnmetEncodingRequest(
+    _ result: MEMessageEncodingResult,
+    composeContext: MailComposeContextSnapshot
+) -> String? {
+    if composeContext.shouldSign, result.signingError == nil, result.encodedMessage?.isSigned != true {
+        return "The message security extension did not sign a message that was meant to be signed."
+    }
+    if composeContext.shouldEncrypt, result.encryptionError == nil, result.encodedMessage?.isEncrypted != true {
+        return "The message security extension did not encrypt a message that was meant to be encrypted."
+    }
+    return nil
+}
 
 final class RustMessageSecurityHandler: NSObject, MEMessageSecurityHandler {
     fileprivate let decodeCallback: MailMessageSecurityDecodeCallback
@@ -69,67 +181,85 @@ final class RustMessageSecurityHandler: NSObject, MEMessageSecurityHandler {
         releaseCallback(userData)
     }
 
-    fileprivate func decodeBox(from bytes: [UInt8]) throws -> MailDecodedMessageBox? {
-        let dataBox = try mailJSONBoxPointer(for: bytes)
-        defer { mail_object_release(dataBox) }
+    fileprivate func decodedMessageBox(for data: Data) -> MailDecodedMessageBox? {
+        do {
+            var errorPtr: UnsafeMutablePointer<CChar>?
+            let result = data.withUnsafeBytes { raw in
+                decodeCallback(raw.baseAddress?.assumingMemoryBound(to: UInt8.self), raw.count, userData, &errorPtr)
+            }
+            if let message = mailTakeCString(errorPtr) {
+                mail_object_release(result)
+                throw MailBridgeError.frameworkError(message)
+            }
+            guard let result else {
+                return nil
+            }
+            guard let decoded = mailConsumeObject(result, as: MailDecodedMessageBox.self) else {
+                throw MailBridgeError.frameworkError("message-security decode callback returned an invalid box")
+            }
+            return decoded
+        } catch {
+            return mailFailedDecodedMessageBox(error.localizedDescription)
+        }
+    }
+
+    fileprivate func invokeEncodeCallback(
+        _ callback: MailMessageSecurityEncodeCallback,
+        message: MailMessageSnapshot,
+        composeContext: MailComposeContextSnapshot
+    ) throws -> UnsafeMutableRawPointer? {
+        let messageBox = try mailSnapshotBoxPointer(for: message)
+        defer { mail_object_release(messageBox) }
+        let contextBox = try mailSnapshotBoxPointer(for: composeContext)
+        defer { mail_object_release(contextBox) }
         var errorPtr: UnsafeMutablePointer<CChar>?
-        let result = decodeCallback(dataBox, userData, &errorPtr)
+        let result = callback(messageBox, contextBox, userData, &errorPtr)
         if let message = mailTakeCString(errorPtr) {
+            mail_object_release(result)
             throw MailBridgeError.frameworkError(message)
         }
-        guard let result else {
-            return nil
-        }
-        guard let decoded = mailConsumeObject(result, as: MailDecodedMessageBox.self) else {
-            throw MailBridgeError.frameworkError("message-security decode callback returned an invalid box")
-        }
-        return decoded
+        return result
     }
 
     fileprivate func encodingStatusBox(
         message: MailMessageSnapshot,
         composeContext: MailComposeContextSnapshot
-    ) throws -> MailOutgoingMessageEncodingStatusBox {
-        let messageBox = try mailJSONBoxPointer(for: message)
-        let contextBox = try mailJSONBoxPointer(for: composeContext)
-        defer {
-            mail_object_release(messageBox)
-            mail_object_release(contextBox)
+    ) -> MailOutgoingMessageEncodingStatusBox {
+        do {
+            let result = try invokeEncodeCallback(
+                encodingStatusCallback,
+                message: message,
+                composeContext: composeContext
+            )
+            guard let status = mailConsumeObject(result, as: MailOutgoingMessageEncodingStatusBox.self) else {
+                throw MailBridgeError.frameworkError("message-security status callback returned null")
+            }
+            return status
+        } catch {
+            return mailFailedEncodingStatusBox(error.localizedDescription)
         }
-        var errorPtr: UnsafeMutablePointer<CChar>?
-        let result = encodingStatusCallback(messageBox, contextBox, userData, &errorPtr)
-        if let message = mailTakeCString(errorPtr) {
-            throw MailBridgeError.frameworkError(message)
-        }
-        guard let result,
-              let status = mailConsumeObject(result, as: MailOutgoingMessageEncodingStatusBox.self)
-        else {
-            throw MailBridgeError.frameworkError("message-security status callback returned null")
-        }
-        return status
     }
 
     fileprivate func encodingResultBox(
         message: MailMessageSnapshot,
         composeContext: MailComposeContextSnapshot
-    ) throws -> MailMessageEncodingResultBox {
-        let messageBox = try mailJSONBoxPointer(for: message)
-        let contextBox = try mailJSONBoxPointer(for: composeContext)
-        defer {
-            mail_object_release(messageBox)
-            mail_object_release(contextBox)
+    ) -> MailMessageEncodingResultBox {
+        do {
+            let result = try invokeEncodeCallback(
+                encodeMessageCallback,
+                message: message,
+                composeContext: composeContext
+            )
+            guard let encodingResult = mailConsumeObject(result, as: MailMessageEncodingResultBox.self) else {
+                throw MailBridgeError.frameworkError("message-security encode callback returned null")
+            }
+            if let unmet = mailUnmetEncodingRequest(encodingResult.result, composeContext: composeContext) {
+                return mailFailedEncodingResultBox(unmet, composeContext: composeContext)
+            }
+            return encodingResult
+        } catch {
+            return mailFailedEncodingResultBox(error.localizedDescription, composeContext: composeContext)
         }
-        var errorPtr: UnsafeMutablePointer<CChar>?
-        let result = encodeMessageCallback(messageBox, contextBox, userData, &errorPtr)
-        if let message = mailTakeCString(errorPtr) {
-            throw MailBridgeError.frameworkError(message)
-        }
-        guard let result,
-              let encodingResult = mailConsumeObject(result, as: MailMessageEncodingResultBox.self)
-        else {
-            throw MailBridgeError.frameworkError("message-security encode callback returned null")
-        }
-        return encodingResult
     }
 
     fileprivate func controller(
@@ -144,6 +274,7 @@ final class RustMessageSecurityHandler: NSObject, MEMessageSecurityHandler {
         var errorPtr: UnsafeMutablePointer<CChar>?
         let result = callback(box, userData, &errorPtr)
         if let message = mailTakeCString(errorPtr) {
+            mail_object_release(result)
             throw MailBridgeError.frameworkError(message)
         }
         guard let result else {
@@ -156,7 +287,7 @@ final class RustMessageSecurityHandler: NSObject, MEMessageSecurityHandler {
     }
 
     func decodedMessage(forMessageData data: Data) -> MEDecodedMessage? {
-        try? decodeBox(from: Array(data))?.message
+        decodedMessageBox(for: data)?.message
     }
 
     func getEncodingStatus(
@@ -164,16 +295,12 @@ final class RustMessageSecurityHandler: NSObject, MEMessageSecurityHandler {
         composeContext: MEComposeContext,
         completionHandler: @escaping (MEOutgoingMessageEncodingStatus) -> Void
     ) {
-        let status = (try? encodingStatusBox(
-            message: mailSnapshot(message),
-            composeContext: mailSnapshot(composeContext)
-        ).status)
-        completionHandler(status ?? MEOutgoingMessageEncodingStatus(
-            canSign: false,
-            canEncrypt: false,
-            securityError: nil,
-            addressesFailingEncryption: []
-        ))
+        completionHandler(
+            encodingStatusBox(
+                message: mailSnapshot(message),
+                composeContext: mailSnapshot(composeContext)
+            ).status
+        )
     }
 
     func encode(
@@ -181,11 +308,12 @@ final class RustMessageSecurityHandler: NSObject, MEMessageSecurityHandler {
         composeContext: MEComposeContext,
         completionHandler: @escaping (MEMessageEncodingResult) -> Void
     ) {
-        let result = (try? encodingResultBox(
-            message: mailSnapshot(message),
-            composeContext: mailSnapshot(composeContext)
-        ).result)
-        completionHandler(result ?? MEMessageEncodingResult(encodedMessage: nil, signingError: nil, encryptionError: nil))
+        completionHandler(
+            encodingResultBox(
+                message: mailSnapshot(message),
+                composeContext: mailSnapshot(composeContext)
+            ).result
+        )
     }
 
     func extensionViewController(signers: [MEMessageSigner]) -> MEExtensionViewController? {
@@ -249,25 +377,39 @@ func mail_message_security_handler_new(
 @_cdecl("mail_message_security_handler_test_decode_message")
 func mail_message_security_handler_test_decode_message(
     _ handler: UnsafeMutableRawPointer?,
-    _ dataBox: UnsafeMutableRawPointer?,
+    _ bytes: UnsafePointer<UInt8>?,
+    _ count: Int,
     _ errorOut: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
 ) -> UnsafeMutableRawPointer? {
-    do {
-        guard let handler = mailTakeObject(handler, as: RustMessageSecurityHandler.self),
-              let dataBox
-        else {
-            throw MailBridgeError.invalidArgument("message-security decode inputs were null")
-        }
-        defer { mail_object_release(dataBox) }
-        let bytes = try mailDecodeJSONBox(dataBox, as: [UInt8].self)
-        if let box = try handler.decodeBox(from: bytes) {
-            return mailRetainedPointer(box)
-        }
-        return nil
-    } catch {
-        mailSetError(errorOut, (error as NSError).localizedDescription)
+    guard let handler = mailTakeObject(handler, as: RustMessageSecurityHandler.self), count >= 0 else {
+        mailSetError(errorOut, "message-security decode inputs were invalid")
         return nil
     }
+    let data: Data
+    if count == 0 {
+        data = Data()
+    } else {
+        guard let bytes else {
+            mailSetError(errorOut, "message-security decode bytes were null")
+            return nil
+        }
+        data = Data(bytes: bytes, count: count)
+    }
+    return handler.decodedMessageBox(for: data).map(mailRetainedPointer)
+}
+
+func mailSecuritySnapshots(
+    _ messageBox: UnsafeMutableRawPointer?,
+    _ contextBox: UnsafeMutableRawPointer?
+) throws -> (MailMessageSnapshot, MailComposeContextSnapshot) {
+    defer {
+        mail_object_release(messageBox)
+        mail_object_release(contextBox)
+    }
+    return (
+        try mailDecodeSnapshotBox(messageBox, as: MailMessageSnapshot.self),
+        try mailDecodeSnapshotBox(contextBox, as: MailComposeContextSnapshot.self)
+    )
 }
 
 @_cdecl("mail_message_security_handler_test_encoding_status")
@@ -278,19 +420,11 @@ func mail_message_security_handler_test_encoding_status(
     _ errorOut: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
 ) -> UnsafeMutableRawPointer? {
     do {
-        guard let handler = mailTakeObject(handler, as: RustMessageSecurityHandler.self),
-              let messageBox,
-              let contextBox
-        else {
-            throw MailBridgeError.invalidArgument("message-security status inputs were null")
+        let (message, context) = try mailSecuritySnapshots(messageBox, contextBox)
+        guard let handler = mailTakeObject(handler, as: RustMessageSecurityHandler.self) else {
+            throw MailBridgeError.invalidArgument("message-security handler was null")
         }
-        defer {
-            mail_object_release(messageBox)
-            mail_object_release(contextBox)
-        }
-        let message = try mailDecodeJSONBox(messageBox, as: MailMessageSnapshot.self)
-        let context = try mailDecodeJSONBox(contextBox, as: MailComposeContextSnapshot.self)
-        return mailRetainedPointer(try handler.encodingStatusBox(message: message, composeContext: context))
+        return mailRetainedPointer(handler.encodingStatusBox(message: message, composeContext: context))
     } catch {
         mailSetError(errorOut, (error as NSError).localizedDescription)
         return nil
@@ -305,19 +439,11 @@ func mail_message_security_handler_test_encode_message(
     _ errorOut: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
 ) -> UnsafeMutableRawPointer? {
     do {
-        guard let handler = mailTakeObject(handler, as: RustMessageSecurityHandler.self),
-              let messageBox,
-              let contextBox
-        else {
-            throw MailBridgeError.invalidArgument("message-security encode inputs were null")
+        let (message, context) = try mailSecuritySnapshots(messageBox, contextBox)
+        guard let handler = mailTakeObject(handler, as: RustMessageSecurityHandler.self) else {
+            throw MailBridgeError.invalidArgument("message-security handler was null")
         }
-        defer {
-            mail_object_release(messageBox)
-            mail_object_release(contextBox)
-        }
-        let message = try mailDecodeJSONBox(messageBox, as: MailMessageSnapshot.self)
-        let context = try mailDecodeJSONBox(contextBox, as: MailComposeContextSnapshot.self)
-        return mailRetainedPointer(try handler.encodingResultBox(message: message, composeContext: context))
+        return mailRetainedPointer(handler.encodingResultBox(message: message, composeContext: context))
     } catch {
         mailSetError(errorOut, (error as NSError).localizedDescription)
         return nil
@@ -405,21 +531,11 @@ func mail_message_security_handler_encoding_status_async(
     _ ctx: UnsafeMutableRawPointer
 ) {
     do {
-        guard let handler = mailTakeObject(handler, as: RustMessageSecurityHandler.self),
-              let messageBox,
-              let contextBox
-        else {
-            throw MailBridgeError.invalidArgument("message-security async status inputs were null")
+        let (message, context) = try mailSecuritySnapshots(messageBox, contextBox)
+        guard let handler = mailTakeObject(handler, as: RustMessageSecurityHandler.self) else {
+            throw MailBridgeError.invalidArgument("message-security async status handler was null")
         }
-        let message = try mailDecodeConsumedJSONBox(messageBox, as: MailMessageSnapshot.self)
-        let context = try mailDecodeConsumedJSONBox(contextBox, as: MailComposeContextSnapshot.self)
-        do {
-            cb(mailRetainedPointer(try handler.encodingStatusBox(message: message, composeContext: context)), nil, ctx)
-        } catch {
-            error.localizedDescription.withCString { errorCString in
-                cb(nil, errorCString, ctx)
-            }
-        }
+        cb(mailRetainedPointer(handler.encodingStatusBox(message: message, composeContext: context)), nil, ctx)
     } catch {
         error.localizedDescription.withCString { errorCString in
             cb(nil, errorCString, ctx)
@@ -436,21 +552,11 @@ func mail_message_security_handler_encode_message_async(
     _ ctx: UnsafeMutableRawPointer
 ) {
     do {
-        guard let handler = mailTakeObject(handler, as: RustMessageSecurityHandler.self),
-              let messageBox,
-              let contextBox
-        else {
-            throw MailBridgeError.invalidArgument("message-security async encode inputs were null")
+        let (message, context) = try mailSecuritySnapshots(messageBox, contextBox)
+        guard let handler = mailTakeObject(handler, as: RustMessageSecurityHandler.self) else {
+            throw MailBridgeError.invalidArgument("message-security async encode handler was null")
         }
-        let message = try mailDecodeConsumedJSONBox(messageBox, as: MailMessageSnapshot.self)
-        let context = try mailDecodeConsumedJSONBox(contextBox, as: MailComposeContextSnapshot.self)
-        do {
-            cb(mailRetainedPointer(try handler.encodingResultBox(message: message, composeContext: context)), nil, ctx)
-        } catch {
-            error.localizedDescription.withCString { errorCString in
-                cb(nil, errorCString, ctx)
-            }
-        }
+        cb(mailRetainedPointer(handler.encodingResultBox(message: message, composeContext: context)), nil, ctx)
     } catch {
         error.localizedDescription.withCString { errorCString in
             cb(nil, errorCString, ctx)

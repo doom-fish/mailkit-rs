@@ -1,3 +1,5 @@
-func mailRawRFC822Data(from snapshot: MailMessageSnapshot) -> [UInt8]? {
+import Foundation
+
+func mailRawRFC822Data(from snapshot: MailMessageSnapshot) -> Data? {
     snapshot.rawData
 }

@@ -4,12 +4,15 @@ use std::ptr;
 
 use serde::{Deserialize, Serialize};
 
-use crate::compose_session_handler::{ComposeContext, ComposeContextInfo};
+use crate::compose_session_handler::ComposeContext;
 use crate::error::{from_swift, take_owned_c_string, MailKitError};
 use crate::extension_view_controller::ExtensionViewController;
 use crate::ffi;
-use crate::message::{Message, MessageInfo};
-use crate::private::{decode_json_box_ref, encode_json_box, write_error_out};
+use crate::message::Message;
+use crate::private::{
+    bytes_from_raw, decode_compose_context_box, decode_json_box_ref, decode_message_box,
+    encode_json_box, encode_message_and_context_boxes, write_error_out,
+};
 use crate::security::{
     DecodedMessage, MessageEncodingResult, MessageSignerInfo, OutgoingMessageEncodingStatus,
 };
@@ -148,13 +151,13 @@ impl MessageSecurityHandler {
         &self,
         data: &[u8],
     ) -> Result<Option<DecodedMessage>, MailKitError> {
-        let data_box = encode_json_box(&data)?;
         let mut error_ptr = ptr::null_mut();
         let result = unsafe {
             ffi::security::mail_message_security_handler_test_decode_message(
                 self.raw,
-                data_box,
-                &mut error_ptr,
+                data.as_ptr(),
+                data.len(),
+                &raw mut error_ptr,
             )
         };
         if !error_ptr.is_null() {
@@ -172,8 +175,8 @@ impl MessageSecurityHandler {
         message: &Message,
         compose_context: &ComposeContext,
     ) -> Result<OutgoingMessageEncodingStatus, MailKitError> {
-        let message_box = encode_json_box(message.info())?;
-        let context_box = encode_json_box(compose_context.info())?;
+        let (message_box, context_box) =
+            encode_message_and_context_boxes(message.info(), compose_context.info())?;
         let mut error_ptr = ptr::null_mut();
         let result = unsafe {
             ffi::security::mail_message_security_handler_test_encoding_status(
@@ -195,8 +198,8 @@ impl MessageSecurityHandler {
         message: &Message,
         compose_context: &ComposeContext,
     ) -> Result<MessageEncodingResult, MailKitError> {
-        let message_box = encode_json_box(message.info())?;
-        let context_box = encode_json_box(compose_context.info())?;
+        let (message_box, context_box) =
+            encode_message_and_context_boxes(message.info(), compose_context.info())?;
         let mut error_ptr = ptr::null_mut();
         let result = unsafe {
             ffi::security::mail_message_security_handler_test_encode_message(
@@ -292,23 +295,26 @@ impl Drop for MessageSecurityHandler {
 }
 
 extern "C" fn decode_callback(
-    data_box: *mut c_void,
+    data: *const u8,
+    len: usize,
     user_data: *mut c_void,
     error_out: *mut *mut c_char,
 ) -> *mut c_void {
     match catch_unwind(AssertUnwindSafe(|| {
         let state = unsafe { &*user_data.cast::<MessageSecurityHandlerState>() };
-        let data = unsafe { decode_json_box_ref::<Vec<u8>>(data_box) }?;
+        let data = unsafe { bytes_from_raw(data, len) }.ok_or_else(|| {
+            MailKitError::FrameworkError("MailKit passed null message data".into())
+        })?;
         state
             .handler
-            .decoded_message_for_message_data(&data)?
+            .decoded_message_for_message_data(data)?
             .map(DecodedMessage::into_box_raw)
             .transpose()
     })) {
         Ok(Ok(Some(result))) => result,
         Ok(Ok(None)) => ptr::null_mut(),
         Ok(Err(error)) => {
-            unsafe { write_error_out(error_out, &error.to_string()) };
+            unsafe { write_error_out(error_out, &error.message()) };
             ptr::null_mut()
         }
         Err(_) => {
@@ -429,15 +435,15 @@ where
 {
     match catch_unwind(AssertUnwindSafe(|| {
         let state = unsafe { &*user_data.cast::<MessageSecurityHandlerState>() };
-        let message_info = unsafe { decode_json_box_ref::<MessageInfo>(message_box) }?;
-        let context_info = unsafe { decode_json_box_ref::<ComposeContextInfo>(context_box) }?;
+        let message_info = unsafe { decode_message_box(message_box) }?;
+        let context_info = unsafe { decode_compose_context_box(context_box) }?;
         let message = Message::new(message_info);
         let context = ComposeContext::new(context_info);
         callback(state.handler.as_ref(), &message, &context)
     })) {
         Ok(Ok(result)) => result,
         Ok(Err(error)) => {
-            unsafe { write_error_out(error_out, &error.to_string()) };
+            unsafe { write_error_out(error_out, &error.message()) };
             ptr::null_mut()
         }
         Err(_) => {

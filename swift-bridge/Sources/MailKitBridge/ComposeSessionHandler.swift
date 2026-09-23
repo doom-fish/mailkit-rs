@@ -3,7 +3,7 @@ import MailKit
 
 struct MailComposeContextSnapshot: Codable {
     let contextId: String
-    let originalMessage: MailMessageSnapshot?
+    var originalMessage: MailMessageSnapshot?
     let action: String
     let isEncrypted: Bool
     let shouldEncrypt: Bool
@@ -11,10 +11,33 @@ struct MailComposeContextSnapshot: Codable {
     let shouldSign: Bool
 }
 
+extension MailComposeContextSnapshot: MailPayloadSnapshot {
+    func payloads(prefix: String) -> [String: Data] {
+        originalMessage?.payloads(prefix: prefix + "originalMessage.") ?? [:]
+    }
+
+    mutating func adoptPayloads(from carrier: MailPayloadCarrier, prefix: String) {
+        originalMessage?.adoptPayloads(from: carrier, prefix: prefix + "originalMessage.")
+    }
+}
+
 struct MailComposeSessionSnapshot: Codable {
     let sessionId: String
-    let mailMessage: MailMessageSnapshot
-    let composeContext: MailComposeContextSnapshot
+    var mailMessage: MailMessageSnapshot
+    var composeContext: MailComposeContextSnapshot
+}
+
+extension MailComposeSessionSnapshot: MailPayloadSnapshot {
+    func payloads(prefix: String) -> [String: Data] {
+        mailMessage.payloads(prefix: prefix + "mailMessage.").merging(
+            composeContext.payloads(prefix: prefix + "composeContext.")
+        ) { current, _ in current }
+    }
+
+    mutating func adoptPayloads(from carrier: MailPayloadCarrier, prefix: String) {
+        mailMessage.adoptPayloads(from: carrier, prefix: prefix + "mailMessage.")
+        composeContext.adoptPayloads(from: carrier, prefix: prefix + "composeContext.")
+    }
 }
 
 struct MailAddressAnnotationEntry: Codable {
@@ -23,19 +46,27 @@ struct MailAddressAnnotationEntry: Codable {
     let localizedDescription: String
 }
 
-final class MailComposeSessionBox: NSObject {
+final class MailComposeSessionBox: NSObject, MailPayloadCarrier {
     let snapshot: MailComposeSessionSnapshot
     let session: MEComposeSession?
+    private let payloads: [String: Data]
     private(set) var reloadCount = 0
 
     init(session: MEComposeSession) {
-        self.snapshot = mailSnapshot(session)
+        let snapshot = mailSnapshot(session)
+        self.snapshot = snapshot
         self.session = session
+        self.payloads = snapshot.payloads(prefix: "")
     }
 
     init(snapshot: MailComposeSessionSnapshot) {
         self.snapshot = snapshot
         self.session = nil
+        self.payloads = snapshot.payloads(prefix: "")
+    }
+
+    func mailPayload(forKey key: String) -> Data? {
+        payloads[key]
     }
 
     func reload() {
@@ -280,12 +311,12 @@ final class RustComposeSessionHandler: NSObject, MEComposeSessionHandler {
 
 @_cdecl("mail_compose_session_new")
 func mail_compose_session_new(
-    _ json: UnsafePointer<CChar>?,
+    _ sessionBox: UnsafeMutableRawPointer?,
     _ outSession: UnsafeMutablePointer<UnsafeMutableRawPointer?>?,
     _ errorOut: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
 ) -> Int32 {
     do {
-        let snapshot = try mailDecodeJSON(json, as: MailComposeSessionSnapshot.self)
+        let snapshot = try mailDecodeSnapshotBox(sessionBox, as: MailComposeSessionSnapshot.self)
         outSession?.pointee = mailRetainedPointer(MailComposeSessionBox(snapshot: snapshot))
         return MAIL_STATUS_OK
     } catch {

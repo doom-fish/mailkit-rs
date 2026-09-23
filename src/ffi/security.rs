@@ -1,7 +1,7 @@
 use core::ffi::{c_char, c_void};
 
 pub type MessageSecurityDecodeCallback =
-    extern "C" fn(*mut c_void, *mut c_void, *mut *mut c_char) -> *mut c_void;
+    extern "C" fn(*const u8, usize, *mut c_void, *mut *mut c_char) -> *mut c_void;
 pub type MessageSecurityEncodeCallback =
     extern "C" fn(*mut c_void, *mut c_void, *mut c_void, *mut *mut c_char) -> *mut c_void;
 pub type MessageSecurityControllerCallback =
@@ -89,7 +89,8 @@ unsafe extern "C" {
     ) -> i32;
     pub fn mail_message_security_handler_test_decode_message(
         handler: *mut c_void,
-        data_box: *mut c_void,
+        bytes: *const u8,
+        len: usize,
         error_out: *mut *mut c_char,
     ) -> *mut c_void;
     pub fn mail_message_security_handler_test_encoding_status(

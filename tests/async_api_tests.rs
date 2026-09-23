@@ -218,3 +218,67 @@ fn test_async_extension_manager_api_surface_is_available() {
     let _: fn(&str) -> mailkit::async_api::ReloadContentBlockerFuture =
         AsyncExtensionManager::reload_content_blocker;
 }
+
+struct FailingSecurityHandler;
+
+impl MessageSecurityHandlerDelegate for FailingSecurityHandler {
+    fn decoded_message_for_message_data(
+        &self,
+        _data: &[u8],
+    ) -> Result<Option<mailkit::DecodedMessage>, mailkit::MailKitError> {
+        Ok(None)
+    }
+
+    fn encoding_status_for_message(
+        &self,
+        _message: &mailkit::Message,
+        _compose_context: &ComposeContext,
+    ) -> Result<mailkit::OutgoingMessageEncodingStatus, mailkit::MailKitError> {
+        Err(mailkit::MailKitError::FrameworkError(
+            "token removed".into(),
+        ))
+    }
+
+    fn encode_message(
+        &self,
+        _message: &mailkit::Message,
+        _compose_context: &ComposeContext,
+    ) -> Result<mailkit::MessageEncodingResult, mailkit::MailKitError> {
+        Err(mailkit::MailKitError::FrameworkError(
+            "token removed".into(),
+        ))
+    }
+}
+
+#[test]
+fn test_async_message_security_handler_fails_closed() {
+    let handler = MessageSecurityHandler::new(FailingSecurityHandler).expect("handler");
+    let message = support::sample_message();
+    let context = ComposeContext::new(support::sample_compose_context_info());
+
+    let result = pollster::block_on(AsyncMessageSecurityHandler::encode_message(
+        &handler, &message, &context,
+    ))
+    .expect("Mail always receives an encoding result");
+    let info = result.info();
+    assert!(info.encoded_message.is_none());
+    for error in [&info.signing_error, &info.encryption_error] {
+        let error = error.as_ref().expect("encoding error");
+        assert_eq!(
+            error.message_security_error_code(),
+            Some(mailkit::MessageSecurityErrorCode::EncodingError)
+        );
+        assert!(error.localized_description.contains("token removed"));
+    }
+
+    let status = pollster::block_on(AsyncMessageSecurityHandler::encoding_status_for_message(
+        &handler, &message, &context,
+    ))
+    .expect("Mail always receives a status");
+    assert!(!status.info().capabilities.can_sign);
+    assert!(status
+        .info()
+        .security_error
+        .as_ref()
+        .is_some_and(|error| error.localized_description.contains("token removed")));
+}

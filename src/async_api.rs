@@ -53,15 +53,15 @@
 //! }
 //! ```
 
-use crate::error::{from_swift, MailKitError, NSErrorInfo};
-use crate::private::{encode_json, encode_json_box, to_cstring};
+use crate::compose_session_handler::ComposeSession;
+use crate::error::{MailKitError, NSErrorInfo};
+use crate::private::{encode_json_box, encode_message_and_context_boxes, to_cstring};
 use doom_fish_utils::completion::{error_from_cstr, AsyncCompletion, AsyncCompletionFuture};
 use std::ffi::c_void;
 use std::future::Future;
 use std::panic::catch_unwind;
 use std::panic::AssertUnwindSafe;
 use std::pin::Pin;
-use std::ptr;
 use std::task::{Context, Poll};
 
 // ============================================================================
@@ -277,41 +277,6 @@ mailkit_result_future!(
 mailkit_result_future!(ReloadVisibleMessagesFuture, ());
 mailkit_result_future!(ReloadContentBlockerFuture, ());
 
-fn compose_session_raw(
-    session: &crate::compose_session_handler::ComposeSession,
-) -> Result<*mut c_void, MailKitError> {
-    let json = encode_json(session.info())?;
-    let mut raw = ptr::null_mut();
-    let mut error_ptr = ptr::null_mut();
-    let status = unsafe {
-        crate::ffi::compose_session_handler::mail_compose_session_new(
-            json.as_ptr(),
-            &mut raw,
-            &mut error_ptr,
-        )
-    };
-    if status != crate::ffi::status::OK {
-        return Err(from_swift(status, error_ptr));
-    }
-    Ok(raw)
-}
-
-fn message_and_context_boxes(
-    message: &crate::message::Message,
-    compose_context: &crate::compose_session_handler::ComposeContext,
-) -> Result<(*mut c_void, *mut c_void), MailKitError> {
-    let message_box = encode_json_box(message.info())?;
-    match encode_json_box(compose_context.info()) {
-        Ok(context_box) => Ok((message_box, context_box)),
-        Err(error) => {
-            unsafe {
-                crate::ffi::core::mail_object_release(message_box);
-            }
-            Err(error)
-        }
-    }
-}
-
 extern "C" fn compose_session_annotations_callback(
     result: *const c_void,
     error: *const i8,
@@ -492,7 +457,7 @@ impl AsyncComposeSessionHandler {
         session: &crate::compose_session_handler::ComposeSession,
     ) -> ComposeSessionAnnotationsFuture {
         let (future, ctx) = AsyncCompletion::create();
-        let session_raw = match compose_session_raw(session) {
+        let session_raw = match ComposeSession::new_raw_from_info(session.info()) {
             Ok(session_raw) => session_raw,
             Err(error) => {
                 complete_async_setup_error::<
@@ -520,7 +485,7 @@ impl AsyncComposeSessionHandler {
         session: &crate::compose_session_handler::ComposeSession,
     ) -> ComposeSessionAllowMessageSendFuture {
         let (future, ctx) = AsyncCompletion::create();
-        let session_raw = match compose_session_raw(session) {
+        let session_raw = match ComposeSession::new_raw_from_info(session.info()) {
             Ok(session_raw) => session_raw,
             Err(error) => {
                 complete_async_setup_error::<()>(ctx, &error);
@@ -552,7 +517,10 @@ impl AsyncMessageSecurityHandler {
         compose_context: &crate::compose_session_handler::ComposeContext,
     ) -> MessageSecurityEncodingStatusFuture {
         let (future, ctx) = AsyncCompletion::create();
-        let (message_box, context_box) = match message_and_context_boxes(message, compose_context) {
+        let (message_box, context_box) = match encode_message_and_context_boxes(
+            message.info(),
+            compose_context.info(),
+        ) {
             Ok(boxes) => boxes,
             Err(error) => {
                 complete_async_setup_error::<crate::security::OutgoingMessageEncodingStatus>(
@@ -582,7 +550,10 @@ impl AsyncMessageSecurityHandler {
         compose_context: &crate::compose_session_handler::ComposeContext,
     ) -> MessageSecurityEncodeMessageFuture {
         let (future, ctx) = AsyncCompletion::create();
-        let (message_box, context_box) = match message_and_context_boxes(message, compose_context) {
+        let (message_box, context_box) = match encode_message_and_context_boxes(
+            message.info(),
+            compose_context.info(),
+        ) {
             Ok(boxes) => boxes,
             Err(error) => {
                 complete_async_setup_error::<crate::security::MessageEncodingResult>(ctx, &error);

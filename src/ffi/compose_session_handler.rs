@@ -11,7 +11,7 @@ pub type AsyncComposeSessionCallback = extern "C" fn(*const c_void, *const i8, *
 
 unsafe extern "C" {
     pub fn mail_compose_session_new(
-        json: *const c_char,
+        session_box: *mut c_void,
         out_session: *mut *mut c_void,
         error_out: *mut *mut c_char,
     ) -> i32;

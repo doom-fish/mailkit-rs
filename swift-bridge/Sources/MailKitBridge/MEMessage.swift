@@ -14,7 +14,35 @@ struct MailMessageSnapshot: Codable {
     let dateSent: String?
     let dateReceived: String?
     let headers: [String: [String]]?
-    let rawData: [UInt8]?
+    var rawData: Data? = nil
+
+    private enum CodingKeys: String, CodingKey {
+        case state
+        case encryptionState
+        case subject
+        case fromAddress
+        case toAddresses
+        case ccAddresses
+        case bccAddresses
+        case replyToAddresses
+        case allRecipientAddresses
+        case dateSent
+        case dateReceived
+        case headers
+    }
+}
+
+extension MailMessageSnapshot: MailPayloadSnapshot {
+    func payloads(prefix: String) -> [String: Data] {
+        guard let rawData else {
+            return [:]
+        }
+        return [prefix + "rawData": rawData]
+    }
+
+    mutating func adoptPayloads(from carrier: MailPayloadCarrier, prefix: String) {
+        rawData = carrier.mailPayload(forKey: prefix + "rawData")
+    }
 }
 
 private let mailISO8601Formatter: ISO8601DateFormatter = {
@@ -74,6 +102,6 @@ func mailSnapshot(_ message: MEMessage) -> MailMessageSnapshot {
         dateSent: mailDateString(mailRefinedDate(message, key: "dateSent")),
         dateReceived: mailDateString(mailRefinedDate(message, key: "dateReceived")),
         headers: message.headers,
-        rawData: message.rawData.map(Array.init)
+        rawData: message.rawData
     )
 }
