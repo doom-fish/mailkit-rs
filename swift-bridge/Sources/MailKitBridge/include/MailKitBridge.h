@@ -117,6 +117,8 @@ int32_t mail_extension_new(
     void **out_extension,
     char **error_out
 );
+bool mail_extension_register_principal(void *extension_ptr);
+void *mail_extension_test_new_principal(void);
 bool mail_extension_test_has_compose_session_handler(void *extension_ptr);
 bool mail_extension_test_has_message_action_handler(void *extension_ptr);
 bool mail_extension_test_has_content_blocker(void *extension_ptr);

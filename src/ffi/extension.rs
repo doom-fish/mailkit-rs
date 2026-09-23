@@ -9,6 +9,8 @@ unsafe extern "C" {
         out_extension: *mut *mut c_void,
         error_out: *mut *mut c_char,
     ) -> i32;
+    pub fn mail_extension_register_principal(extension_ptr: *mut c_void) -> bool;
+    pub fn mail_extension_test_new_principal() -> *mut c_void;
     pub fn mail_extension_test_has_compose_session_handler(extension_ptr: *mut c_void) -> bool;
     pub fn mail_extension_test_has_message_action_handler(extension_ptr: *mut c_void) -> bool;
     pub fn mail_extension_test_has_content_blocker(extension_ptr: *mut c_void) -> bool;

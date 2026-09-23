@@ -1,6 +1,28 @@
+import Darwin
 import Foundation
 import MailKit
 
+private let mailPrincipalLock = NSLock()
+private var mailPrincipal: RustMailExtension?
+
+private func mailRegisteredPrincipal() -> RustMailExtension? {
+    mailPrincipalLock.lock()
+    defer { mailPrincipalLock.unlock() }
+    return mailPrincipal
+}
+
+private func mailInstallPrincipal() -> RustMailExtension? {
+    if let principal = mailRegisteredPrincipal() {
+        return principal
+    }
+    guard let symbol = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "mailkit_install_extension") else {
+        return nil
+    }
+    unsafeBitCast(symbol, to: (@convention(c) () -> Void).self)()
+    return mailRegisteredPrincipal()
+}
+
+@objc(RustMailExtension)
 final class RustMailExtension: NSObject, MEExtension {
     private let composeSessionHandler: RustComposeSessionHandler?
     private let messageActionHandler: RustMessageActionHandler?
@@ -17,6 +39,16 @@ final class RustMailExtension: NSObject, MEExtension {
         self.messageActionHandler = messageActionHandler
         self.contentBlocker = contentBlocker
         self.messageSecurityHandler = messageSecurityHandler
+    }
+
+    override convenience init() {
+        let principal = mailInstallPrincipal()
+        self.init(
+            composeSessionHandler: principal?.composeSessionHandler,
+            messageActionHandler: principal?.messageActionHandler,
+            contentBlocker: principal?.contentBlocker,
+            messageSecurityHandler: principal?.messageSecurityHandler
+        )
     }
 
     override func responds(to selector: Selector!) -> Bool {
@@ -69,6 +101,23 @@ func mail_extension_new(
         )
     )
     return MAIL_STATUS_OK
+}
+
+@_cdecl("mail_extension_register_principal")
+func mail_extension_register_principal(_ extensionPtr: UnsafeMutableRawPointer?) -> Bool {
+    let mailExtension = mailTakeObject(extensionPtr, as: RustMailExtension.self)
+    mailPrincipalLock.lock()
+    mailPrincipal = mailExtension
+    mailPrincipalLock.unlock()
+    return mailExtension != nil
+}
+
+@_cdecl("mail_extension_test_new_principal")
+func mail_extension_test_new_principal() -> UnsafeMutableRawPointer? {
+    guard let principalClass = NSClassFromString("RustMailExtension") as? NSObject.Type else {
+        return nil
+    }
+    return mailRetainedPointer(principalClass.init())
 }
 
 @_cdecl("mail_extension_test_has_compose_session_handler")

@@ -135,3 +135,62 @@ fn mail_extension_reports_registered_handlers() {
     assert!(extension.has_content_blocker());
     assert!(extension.has_message_security_handler());
 }
+
+struct Principal(*mut core::ffi::c_void);
+
+impl Principal {
+    fn instantiate() -> Self {
+        let raw = unsafe { mailkit::ffi::extension::mail_extension_test_new_principal() };
+        assert!(
+            !raw.is_null(),
+            "RustMailExtension must be instantiable by class name"
+        );
+        Self(raw)
+    }
+
+    fn handlers(&self) -> [bool; 4] {
+        unsafe {
+            [
+                mailkit::ffi::extension::mail_extension_test_has_compose_session_handler(self.0),
+                mailkit::ffi::extension::mail_extension_test_has_message_action_handler(self.0),
+                mailkit::ffi::extension::mail_extension_test_has_content_blocker(self.0),
+                mailkit::ffi::extension::mail_extension_test_has_message_security_handler(self.0),
+            ]
+        }
+    }
+}
+
+impl Drop for Principal {
+    fn drop(&mut self) {
+        unsafe { mailkit::ffi::core::mail_object_release(self.0) };
+    }
+}
+
+#[test]
+fn principal_class_serves_the_registered_extension() {
+    let extension = MailExtension::builder()
+        .with_content_blocker(ContentBlocker::new(StubContentBlocker).expect("blocker"))
+        .with_message_security_handler(
+            MessageSecurityHandler::new(StubSecurityHandler).expect("security"),
+        )
+        .build()
+        .expect("extension");
+    extension.register_as_principal().expect("register");
+    drop(extension);
+
+    let principal = Principal::instantiate();
+    assert_eq!(principal.handlers(), [false, false, true, true]);
+
+    let replacement = MailExtension::builder()
+        .with_message_action_handler(
+            MessageActionExtension::new(StubActionHandler).expect("action"),
+        )
+        .build()
+        .expect("extension");
+    replacement.register_as_principal().expect("register");
+    assert_eq!(principal.handlers(), [false, false, true, true]);
+    assert_eq!(
+        Principal::instantiate().handlers(),
+        [false, true, false, false]
+    );
+}

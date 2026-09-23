@@ -74,6 +74,16 @@ impl MailExtension {
     pub fn has_message_security_handler(&self) -> bool {
         unsafe { ffi::extension::mail_extension_test_has_message_security_handler(self.raw) }
     }
+
+    pub fn register_as_principal(&self) -> Result<(), MailKitError> {
+        if unsafe { ffi::extension::mail_extension_register_principal(self.raw) } {
+            Ok(())
+        } else {
+            Err(MailKitError::FrameworkError(
+                "MailKit could not register the extension for RustMailExtension".into(),
+            ))
+        }
+    }
 }
 
 impl Drop for MailExtension {
