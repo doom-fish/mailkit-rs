@@ -1,5 +1,5 @@
 use core::ffi::c_void;
-use std::mem::ManuallyDrop;
+use std::mem;
 use std::ptr;
 
 use serde::{Deserialize, Serialize};
@@ -232,11 +232,8 @@ impl MessageActionDecision {
         &self.kind
     }
 
-    pub(crate) fn into_raw(self) -> *mut c_void {
-        let mut this = ManuallyDrop::new(self);
-        let raw = this.raw;
-        this.raw = ptr::null_mut();
-        raw
+    pub(crate) fn into_raw(mut self) -> *mut c_void {
+        mem::replace(&mut self.raw, ptr::null_mut())
     }
 
     pub(crate) fn into_box_raw(self) -> Result<*mut c_void, MailKitError> {
@@ -261,12 +258,15 @@ impl MessageActionDecision {
         let kind_json = take_owned_c_string(unsafe {
             ffi::core::mail_message_action_decision_box_copy_json(box_raw)
         });
-        let kind =
-            serde_json::from_str::<MessageActionDecisionKind>(&kind_json).map_err(|error| {
-                MailKitError::FrameworkError(format!(
+        let kind = match serde_json::from_str::<MessageActionDecisionKind>(&kind_json) {
+            Ok(kind) => kind,
+            Err(error) => {
+                unsafe { ffi::core::mail_object_release(box_raw) };
+                return Err(MailKitError::FrameworkError(format!(
                     "failed to decode MailKit message-action decision box: {error}"
-                ))
-            })?;
+                )));
+            }
+        };
         let raw = unsafe { ffi::core::mail_message_action_decision_box_copy_value(box_raw) };
         unsafe { ffi::core::mail_object_release(box_raw) };
         Self::from_raw(raw, kind)

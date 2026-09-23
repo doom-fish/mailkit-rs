@@ -1,5 +1,5 @@
 use core::ffi::c_void;
-use std::mem::ManuallyDrop;
+use std::mem;
 use std::ptr;
 
 use serde::{Deserialize, Serialize};
@@ -365,11 +365,8 @@ impl DecodedMessage {
         &self.info
     }
 
-    pub(crate) fn into_raw(self) -> *mut c_void {
-        let mut this = ManuallyDrop::new(self);
-        let raw = this.raw;
-        this.raw = ptr::null_mut();
-        raw
+    pub(crate) fn into_raw(mut self) -> *mut c_void {
+        mem::replace(&mut self.raw, ptr::null_mut())
     }
 
     pub(crate) fn into_box_raw(self) -> Result<*mut c_void, MailKitError> {
@@ -487,11 +484,8 @@ impl OutgoingMessageEncodingStatus {
         &self.info
     }
 
-    pub(crate) fn into_raw(self) -> *mut c_void {
-        let mut this = ManuallyDrop::new(self);
-        let raw = this.raw;
-        this.raw = ptr::null_mut();
-        raw
+    pub(crate) fn into_raw(mut self) -> *mut c_void {
+        mem::replace(&mut self.raw, ptr::null_mut())
     }
 
     pub(crate) fn into_box_raw(self) -> Result<*mut c_void, MailKitError> {
@@ -519,13 +513,15 @@ impl OutgoingMessageEncodingStatus {
         let info_json = take_owned_c_string(unsafe {
             ffi::core::mail_outgoing_message_encoding_status_box_copy_json(box_raw)
         });
-        let info = serde_json::from_str::<OutgoingMessageEncodingStatusInfo>(&info_json).map_err(
-            |error| {
-                MailKitError::FrameworkError(format!(
+        let info = match serde_json::from_str::<OutgoingMessageEncodingStatusInfo>(&info_json) {
+            Ok(info) => info,
+            Err(error) => {
+                unsafe { ffi::core::mail_object_release(box_raw) };
+                return Err(MailKitError::FrameworkError(format!(
                     "failed to decode MailKit outgoing-message status box: {error}"
-                ))
-            },
-        )?;
+                )));
+            }
+        };
         let raw =
             unsafe { ffi::core::mail_outgoing_message_encoding_status_box_copy_value(box_raw) };
         unsafe { ffi::core::mail_object_release(box_raw) };
@@ -576,11 +572,8 @@ impl MessageEncodingResult {
         &self.info
     }
 
-    pub(crate) fn into_raw(self) -> *mut c_void {
-        let mut this = ManuallyDrop::new(self);
-        let raw = this.raw;
-        this.raw = ptr::null_mut();
-        raw
+    pub(crate) fn into_raw(mut self) -> *mut c_void {
+        mem::replace(&mut self.raw, ptr::null_mut())
     }
 
     pub(crate) fn into_box_raw(self) -> Result<*mut c_void, MailKitError> {
