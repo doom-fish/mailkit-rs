@@ -209,7 +209,7 @@ fn test_async_message_security_handler_roundtrip() {
     )
     .expect("primary action controller");
     assert!(controller.is_some());
-    assert!(!message_security_error_domain().is_empty());
+    assert_ne!(message_security_error_domain(), "");
 }
 
 #[test]

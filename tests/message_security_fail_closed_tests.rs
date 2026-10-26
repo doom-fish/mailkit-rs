@@ -212,7 +212,10 @@ fn status_error_surfaces_as_security_error() {
         let info = status.info();
         assert!(!info.capabilities.can_sign);
         assert!(!info.capabilities.can_encrypt);
-        assert!(info.addresses_failing_encryption.is_empty());
+        assert_eq!(
+            info.addresses_failing_encryption,
+            [] as [mailkit::EmailAddressInfo; 0]
+        );
         let expected = match outcome {
             Outcome::Panic => "panicked",
             _ => "keychain is locked",

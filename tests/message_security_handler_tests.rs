@@ -95,7 +95,7 @@ fn message_security_handler_round_trips_decoder_encoder_and_ui_hooks() {
         .primary_action_clicked_for_message_context(b"context")
         .expect("primary action controller")
         .expect("primary action view controller");
-    assert!(!message_security_error_domain().is_empty());
+    assert_ne!(message_security_error_domain(), "");
     assert_eq!(MessageSecurityErrorCode::EncodingError.as_code(), 0);
     assert_eq!(MessageSecurityErrorCode::DecodingError.as_code(), 1);
 
