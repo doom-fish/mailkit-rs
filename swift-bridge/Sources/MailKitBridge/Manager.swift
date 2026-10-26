@@ -52,7 +52,7 @@ private func mailWaitForNSErrorCompletion(
 }
 
 @_cdecl("mail_extension_manager_reload_visible_messages")
-func mail_extension_manager_reload_visible_messages(
+public func mail_extension_manager_reload_visible_messages(
     _ timeoutMilliseconds: UInt64,
     _ errorOut: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
 ) -> Int32 {
@@ -65,7 +65,7 @@ func mail_extension_manager_reload_visible_messages(
 }
 
 @_cdecl("mail_extension_manager_reload_content_blocker")
-func mail_extension_manager_reload_content_blocker(
+public func mail_extension_manager_reload_content_blocker(
     _ identifier: UnsafePointer<CChar>?,
     _ timeoutMilliseconds: UInt64,
     _ errorOut: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
@@ -87,7 +87,7 @@ func mail_extension_manager_reload_content_blocker(
 }
 
 @_cdecl("mail_extension_manager_reload_visible_messages_async")
-func mail_extension_manager_reload_visible_messages_async(
+public func mail_extension_manager_reload_visible_messages_async(
     _ cb: @escaping @convention(c) (UnsafeRawPointer?, UnsafePointer<CChar>?, UnsafeMutableRawPointer) -> Void,
     _ ctx: UnsafeMutableRawPointer
 ) {
@@ -110,7 +110,7 @@ func mail_extension_manager_reload_visible_messages_async(
 }
 
 @_cdecl("mail_extension_manager_reload_content_blocker_async")
-func mail_extension_manager_reload_content_blocker_async(
+public func mail_extension_manager_reload_content_blocker_async(
     _ identifier: UnsafePointer<CChar>?,
     _ cb: @escaping @convention(c) (UnsafeRawPointer?, UnsafePointer<CChar>?, UnsafeMutableRawPointer) -> Void,
     _ ctx: UnsafeMutableRawPointer

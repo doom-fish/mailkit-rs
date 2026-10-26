@@ -25,7 +25,7 @@ enum MailBridgeError: LocalizedError {
     }
 }
 
-typealias MailByteSink = @convention(c) (UnsafeMutableRawPointer?, UnsafePointer<UInt8>?, Int) -> Void
+public typealias MailByteSink = @convention(c) (UnsafeMutableRawPointer?, UnsafePointer<UInt8>?, Int) -> Void
 
 protocol MailPayloadCarrier: AnyObject {
     func mailPayload(forKey key: String) -> Data?
@@ -262,7 +262,7 @@ func mailData(
 }
 
 @_cdecl("mail_json_box_new")
-func mail_json_box_new(_ json: UnsafePointer<CChar>?) -> UnsafeMutableRawPointer? {
+public func mail_json_box_new(_ json: UnsafePointer<CChar>?) -> UnsafeMutableRawPointer? {
     guard let json else {
         return nil
     }
@@ -270,12 +270,12 @@ func mail_json_box_new(_ json: UnsafePointer<CChar>?) -> UnsafeMutableRawPointer
 }
 
 @_cdecl("mail_json_box_copy")
-func mail_json_box_copy(_ box: UnsafeMutableRawPointer?) -> UnsafeMutablePointer<CChar>? {
+public func mail_json_box_copy(_ box: UnsafeMutableRawPointer?) -> UnsafeMutablePointer<CChar>? {
     mailCopyString(mailTakeObject(box, as: MailJSONBox.self)?.json)
 }
 
 @_cdecl("mail_json_box_set_payload")
-func mail_json_box_set_payload(
+public func mail_json_box_set_payload(
     _ box: UnsafeMutableRawPointer?,
     _ key: UnsafePointer<CChar>?,
     _ bytes: UnsafePointer<UInt8>?,
@@ -298,7 +298,7 @@ func mail_json_box_set_payload(
 }
 
 @_cdecl("mail_box_copy_payload")
-func mail_box_copy_payload(
+public func mail_box_copy_payload(
     _ box: UnsafeMutableRawPointer?,
     _ key: UnsafePointer<CChar>?,
     _ sink: MailByteSink?,
@@ -314,7 +314,7 @@ func mail_box_copy_payload(
 }
 
 @_cdecl("mail_message_action_decision_box_new")
-func mail_message_action_decision_box_new(
+public func mail_message_action_decision_box_new(
     _ decision: UnsafeMutableRawPointer?,
     _ json: UnsafePointer<CChar>?
 ) -> UnsafeMutableRawPointer? {
@@ -325,12 +325,12 @@ func mail_message_action_decision_box_new(
 }
 
 @_cdecl("mail_message_action_decision_box_copy_json")
-func mail_message_action_decision_box_copy_json(_ box: UnsafeMutableRawPointer?) -> UnsafeMutablePointer<CChar>? {
+public func mail_message_action_decision_box_copy_json(_ box: UnsafeMutableRawPointer?) -> UnsafeMutablePointer<CChar>? {
     mailCopyString(mailTakeObject(box, as: MailMessageActionDecisionBox.self)?.json)
 }
 
 @_cdecl("mail_message_action_decision_box_copy_value")
-func mail_message_action_decision_box_copy_value(_ box: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer? {
+public func mail_message_action_decision_box_copy_value(_ box: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer? {
     guard let box = mailTakeObject(box, as: MailMessageActionDecisionBox.self) else {
         return nil
     }
@@ -338,7 +338,7 @@ func mail_message_action_decision_box_copy_value(_ box: UnsafeMutableRawPointer?
 }
 
 @_cdecl("mail_decoded_message_box_new")
-func mail_decoded_message_box_new(
+public func mail_decoded_message_box_new(
     _ message: UnsafeMutableRawPointer?,
     _ json: UnsafePointer<CChar>?
 ) -> UnsafeMutableRawPointer? {
@@ -349,12 +349,12 @@ func mail_decoded_message_box_new(
 }
 
 @_cdecl("mail_decoded_message_box_copy_json")
-func mail_decoded_message_box_copy_json(_ box: UnsafeMutableRawPointer?) -> UnsafeMutablePointer<CChar>? {
+public func mail_decoded_message_box_copy_json(_ box: UnsafeMutableRawPointer?) -> UnsafeMutablePointer<CChar>? {
     mailCopyString(mailTakeObject(box, as: MailDecodedMessageBox.self)?.json)
 }
 
 @_cdecl("mail_decoded_message_box_copy_value")
-func mail_decoded_message_box_copy_value(_ box: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer? {
+public func mail_decoded_message_box_copy_value(_ box: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer? {
     guard let box = mailTakeObject(box, as: MailDecodedMessageBox.self) else {
         return nil
     }
@@ -362,7 +362,7 @@ func mail_decoded_message_box_copy_value(_ box: UnsafeMutableRawPointer?) -> Uns
 }
 
 @_cdecl("mail_decoded_message_box_copy_raw_data")
-func mail_decoded_message_box_copy_raw_data(
+public func mail_decoded_message_box_copy_raw_data(
     _ box: UnsafeMutableRawPointer?,
     _ sink: MailByteSink?,
     _ context: UnsafeMutableRawPointer?
@@ -371,7 +371,7 @@ func mail_decoded_message_box_copy_raw_data(
 }
 
 @_cdecl("mail_outgoing_message_encoding_status_box_new")
-func mail_outgoing_message_encoding_status_box_new(
+public func mail_outgoing_message_encoding_status_box_new(
     _ status: UnsafeMutableRawPointer?,
     _ json: UnsafePointer<CChar>?
 ) -> UnsafeMutableRawPointer? {
@@ -382,12 +382,12 @@ func mail_outgoing_message_encoding_status_box_new(
 }
 
 @_cdecl("mail_outgoing_message_encoding_status_box_copy_json")
-func mail_outgoing_message_encoding_status_box_copy_json(_ box: UnsafeMutableRawPointer?) -> UnsafeMutablePointer<CChar>? {
+public func mail_outgoing_message_encoding_status_box_copy_json(_ box: UnsafeMutableRawPointer?) -> UnsafeMutablePointer<CChar>? {
     mailCopyString(mailTakeObject(box, as: MailOutgoingMessageEncodingStatusBox.self)?.json)
 }
 
 @_cdecl("mail_outgoing_message_encoding_status_box_copy_value")
-func mail_outgoing_message_encoding_status_box_copy_value(
+public func mail_outgoing_message_encoding_status_box_copy_value(
     _ box: UnsafeMutableRawPointer?
 ) -> UnsafeMutableRawPointer? {
     guard let box = mailTakeObject(box, as: MailOutgoingMessageEncodingStatusBox.self) else {
@@ -397,7 +397,7 @@ func mail_outgoing_message_encoding_status_box_copy_value(
 }
 
 @_cdecl("mail_message_encoding_result_box_new")
-func mail_message_encoding_result_box_new(
+public func mail_message_encoding_result_box_new(
     _ result: UnsafeMutableRawPointer?,
     _ json: UnsafePointer<CChar>?
 ) -> UnsafeMutableRawPointer? {
@@ -408,12 +408,12 @@ func mail_message_encoding_result_box_new(
 }
 
 @_cdecl("mail_message_encoding_result_box_copy_json")
-func mail_message_encoding_result_box_copy_json(_ box: UnsafeMutableRawPointer?) -> UnsafeMutablePointer<CChar>? {
+public func mail_message_encoding_result_box_copy_json(_ box: UnsafeMutableRawPointer?) -> UnsafeMutablePointer<CChar>? {
     mailCopyString(mailTakeObject(box, as: MailMessageEncodingResultBox.self)?.json)
 }
 
 @_cdecl("mail_message_encoding_result_box_copy_value")
-func mail_message_encoding_result_box_copy_value(_ box: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer? {
+public func mail_message_encoding_result_box_copy_value(_ box: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer? {
     guard let box = mailTakeObject(box, as: MailMessageEncodingResultBox.self) else {
         return nil
     }
@@ -421,7 +421,7 @@ func mail_message_encoding_result_box_copy_value(_ box: UnsafeMutableRawPointer?
 }
 
 @_cdecl("mail_message_encoding_result_box_copy_raw_data")
-func mail_message_encoding_result_box_copy_raw_data(
+public func mail_message_encoding_result_box_copy_raw_data(
     _ box: UnsafeMutableRawPointer?,
     _ sink: MailByteSink?,
     _ context: UnsafeMutableRawPointer?
@@ -434,22 +434,22 @@ func mail_message_encoding_result_box_copy_raw_data(
 }
 
 @_cdecl("mail_compose_session_error_domain_copy")
-func mail_compose_session_error_domain_copy() -> UnsafeMutablePointer<CChar>? {
+public func mail_compose_session_error_domain_copy() -> UnsafeMutablePointer<CChar>? {
     mailCopyString(MEComposeSessionErrorDomain)
 }
 
 @_cdecl("mail_message_security_error_domain_copy")
-func mail_message_security_error_domain_copy() -> UnsafeMutablePointer<CChar>? {
+public func mail_message_security_error_domain_copy() -> UnsafeMutablePointer<CChar>? {
     mailCopyString(MEMessageSecurityErrorDomain)
 }
 
 @_cdecl("mail_extension_view_controller_new")
-func mail_extension_view_controller_new() -> UnsafeMutableRawPointer? {
+public func mail_extension_view_controller_new() -> UnsafeMutableRawPointer? {
     mailRetainedPointer(MEExtensionViewController())
 }
 
 @_cdecl("mail_object_release")
-func mail_object_release(_ ptr: UnsafeMutableRawPointer?) {
+public func mail_object_release(_ ptr: UnsafeMutableRawPointer?) {
     guard let ptr else {
         return
     }

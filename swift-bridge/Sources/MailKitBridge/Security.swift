@@ -2,7 +2,7 @@ import Foundation
 import MailKit
 
 @_cdecl("mail_message_signer_new")
-func mail_message_signer_new(
+public func mail_message_signer_new(
     _ addresses: UnsafePointer<UnsafeMutableRawPointer?>?,
     _ addressCount: Int,
     _ label: UnsafePointer<CChar>?,
@@ -56,7 +56,7 @@ func mail_message_signer_new(
 }
 
 @_cdecl("mail_message_security_information_new")
-func mail_message_security_information_new(
+public func mail_message_security_information_new(
     _ signers: UnsafePointer<UnsafeMutableRawPointer?>?,
     _ signerCount: Int,
     _ isEncrypted: Bool,

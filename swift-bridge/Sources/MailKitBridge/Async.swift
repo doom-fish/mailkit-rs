@@ -2,7 +2,7 @@ import Foundation
 import MailKit
 
 @_cdecl("mail_message_action_decision_async")
-func mail_message_action_decision_async(
+public func mail_message_action_decision_async(
     _ handler: UnsafeMutableRawPointer?,
     _ messageBox: UnsafeMutableRawPointer?,
     _ cb: @convention(c) (UnsafeRawPointer?, UnsafePointer<CChar>?, UnsafeMutableRawPointer) -> Void,
@@ -26,7 +26,7 @@ func mail_message_action_decision_async(
 }
 
 @_cdecl("mail_content_blocker_content_rules_async")
-func mail_content_blocker_content_rules_async(
+public func mail_content_blocker_content_rules_async(
     _ blocker: UnsafeMutableRawPointer?,
     _ cb: @convention(c) (UnsafeRawPointer?, UnsafePointer<CChar>?, UnsafeMutableRawPointer) -> Void,
     _ ctx: UnsafeMutableRawPointer

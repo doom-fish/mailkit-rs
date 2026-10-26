@@ -84,7 +84,7 @@ final class RustMailExtension: NSObject, MEExtension {
 }
 
 @_cdecl("mail_extension_new")
-func mail_extension_new(
+public func mail_extension_new(
     _ composeSessionHandler: UnsafeMutableRawPointer?,
     _ messageActionHandler: UnsafeMutableRawPointer?,
     _ contentBlocker: UnsafeMutableRawPointer?,
@@ -104,7 +104,7 @@ func mail_extension_new(
 }
 
 @_cdecl("mail_extension_register_principal")
-func mail_extension_register_principal(_ extensionPtr: UnsafeMutableRawPointer?) -> Bool {
+public func mail_extension_register_principal(_ extensionPtr: UnsafeMutableRawPointer?) -> Bool {
     let mailExtension = mailTakeObject(extensionPtr, as: RustMailExtension.self)
     mailPrincipalLock.lock()
     mailPrincipal = mailExtension
@@ -113,7 +113,7 @@ func mail_extension_register_principal(_ extensionPtr: UnsafeMutableRawPointer?)
 }
 
 @_cdecl("mail_extension_test_new_principal")
-func mail_extension_test_new_principal() -> UnsafeMutableRawPointer? {
+public func mail_extension_test_new_principal() -> UnsafeMutableRawPointer? {
     guard let principalClass = NSClassFromString("RustMailExtension") as? NSObject.Type else {
         return nil
     }
@@ -121,7 +121,7 @@ func mail_extension_test_new_principal() -> UnsafeMutableRawPointer? {
 }
 
 @_cdecl("mail_extension_test_has_compose_session_handler")
-func mail_extension_test_has_compose_session_handler(_ extensionPtr: UnsafeMutableRawPointer?) -> Bool {
+public func mail_extension_test_has_compose_session_handler(_ extensionPtr: UnsafeMutableRawPointer?) -> Bool {
     guard let mailExtension = mailTakeObject(extensionPtr, as: RustMailExtension.self) else {
         return false
     }
@@ -129,7 +129,7 @@ func mail_extension_test_has_compose_session_handler(_ extensionPtr: UnsafeMutab
 }
 
 @_cdecl("mail_extension_test_has_message_action_handler")
-func mail_extension_test_has_message_action_handler(_ extensionPtr: UnsafeMutableRawPointer?) -> Bool {
+public func mail_extension_test_has_message_action_handler(_ extensionPtr: UnsafeMutableRawPointer?) -> Bool {
     guard let mailExtension = mailTakeObject(extensionPtr, as: RustMailExtension.self) else {
         return false
     }
@@ -137,7 +137,7 @@ func mail_extension_test_has_message_action_handler(_ extensionPtr: UnsafeMutabl
 }
 
 @_cdecl("mail_extension_test_has_content_blocker")
-func mail_extension_test_has_content_blocker(_ extensionPtr: UnsafeMutableRawPointer?) -> Bool {
+public func mail_extension_test_has_content_blocker(_ extensionPtr: UnsafeMutableRawPointer?) -> Bool {
     guard let mailExtension = mailTakeObject(extensionPtr, as: RustMailExtension.self) else {
         return false
     }
@@ -145,7 +145,7 @@ func mail_extension_test_has_content_blocker(_ extensionPtr: UnsafeMutableRawPoi
 }
 
 @_cdecl("mail_extension_test_has_message_security_handler")
-func mail_extension_test_has_message_security_handler(_ extensionPtr: UnsafeMutableRawPointer?) -> Bool {
+public func mail_extension_test_has_message_security_handler(_ extensionPtr: UnsafeMutableRawPointer?) -> Bool {
     guard let mailExtension = mailTakeObject(extensionPtr, as: RustMailExtension.self) else {
         return false
     }

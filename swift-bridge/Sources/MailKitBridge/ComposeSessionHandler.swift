@@ -148,25 +148,25 @@ private func mailAnnotationDictionary(
     })
 }
 
-typealias MailComposeSessionVoidCallback = @convention(c) (
+public typealias MailComposeSessionVoidCallback = @convention(c) (
     UnsafeMutableRawPointer?,
     UnsafeMutableRawPointer?,
     UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
 ) -> Int32
 
-typealias MailComposeSessionControllerCallback = @convention(c) (
+public typealias MailComposeSessionControllerCallback = @convention(c) (
     UnsafeMutableRawPointer?,
     UnsafeMutableRawPointer?,
     UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
 ) -> UnsafeMutableRawPointer?
 
-typealias MailComposeSessionJSONCallback = @convention(c) (
+public typealias MailComposeSessionJSONCallback = @convention(c) (
     UnsafeMutableRawPointer?,
     UnsafeMutableRawPointer?,
     UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
 ) -> UnsafeMutableRawPointer?
 
-typealias MailReleaseUserDataCallback = @convention(c) (UnsafeMutableRawPointer?) -> Void
+public typealias MailReleaseUserDataCallback = @convention(c) (UnsafeMutableRawPointer?) -> Void
 
 final class RustComposeSessionHandler: NSObject, MEComposeSessionHandler {
     fileprivate let didBeginCallback: MailComposeSessionVoidCallback
@@ -310,7 +310,7 @@ final class RustComposeSessionHandler: NSObject, MEComposeSessionHandler {
 }
 
 @_cdecl("mail_compose_session_new")
-func mail_compose_session_new(
+public func mail_compose_session_new(
     _ sessionBox: UnsafeMutableRawPointer?,
     _ outSession: UnsafeMutablePointer<UnsafeMutableRawPointer?>?,
     _ errorOut: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
@@ -326,7 +326,7 @@ func mail_compose_session_new(
 }
 
 @_cdecl("mail_compose_session_copy_json")
-func mail_compose_session_copy_json(_ session: UnsafeMutableRawPointer?) -> UnsafeMutablePointer<CChar>? {
+public func mail_compose_session_copy_json(_ session: UnsafeMutableRawPointer?) -> UnsafeMutablePointer<CChar>? {
     guard let session = mailTakeObject(session, as: MailComposeSessionBox.self) else {
         return nil
     }
@@ -338,7 +338,7 @@ func mail_compose_session_copy_json(_ session: UnsafeMutableRawPointer?) -> Unsa
 }
 
 @_cdecl("mail_compose_session_reload")
-func mail_compose_session_reload(
+public func mail_compose_session_reload(
     _ session: UnsafeMutableRawPointer?,
     _ errorOut: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
 ) -> Int32 {
@@ -351,12 +351,12 @@ func mail_compose_session_reload(
 }
 
 @_cdecl("mail_compose_session_reload_count")
-func mail_compose_session_reload_count(_ session: UnsafeMutableRawPointer?) -> Int {
+public func mail_compose_session_reload_count(_ session: UnsafeMutableRawPointer?) -> Int {
     mailTakeObject(session, as: MailComposeSessionBox.self)?.reloadCount ?? 0
 }
 
 @_cdecl("mail_compose_session_handler_new")
-func mail_compose_session_handler_new(
+public func mail_compose_session_handler_new(
     _ didBeginCallback: MailComposeSessionVoidCallback?,
     _ didEndCallback: MailComposeSessionVoidCallback?,
     _ viewControllerCallback: MailComposeSessionControllerCallback?,
@@ -388,7 +388,7 @@ func mail_compose_session_handler_new(
 }
 
 @_cdecl("mail_compose_session_handler_test_did_begin")
-func mail_compose_session_handler_test_did_begin(
+public func mail_compose_session_handler_test_did_begin(
     _ handler: UnsafeMutableRawPointer?,
     _ session: UnsafeMutableRawPointer?,
     _ errorOut: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
@@ -408,7 +408,7 @@ func mail_compose_session_handler_test_did_begin(
 }
 
 @_cdecl("mail_compose_session_handler_test_did_end")
-func mail_compose_session_handler_test_did_end(
+public func mail_compose_session_handler_test_did_end(
     _ handler: UnsafeMutableRawPointer?,
     _ session: UnsafeMutableRawPointer?,
     _ errorOut: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
@@ -428,7 +428,7 @@ func mail_compose_session_handler_test_did_end(
 }
 
 @_cdecl("mail_compose_session_handler_test_view_controller")
-func mail_compose_session_handler_test_view_controller(
+public func mail_compose_session_handler_test_view_controller(
     _ handler: UnsafeMutableRawPointer?,
     _ session: UnsafeMutableRawPointer?,
     _ errorOut: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
@@ -448,7 +448,7 @@ func mail_compose_session_handler_test_view_controller(
 }
 
 @_cdecl("mail_compose_session_handler_test_annotate_addresses")
-func mail_compose_session_handler_test_annotate_addresses(
+public func mail_compose_session_handler_test_annotate_addresses(
     _ handler: UnsafeMutableRawPointer?,
     _ session: UnsafeMutableRawPointer?,
     _ errorOut: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
@@ -467,7 +467,7 @@ func mail_compose_session_handler_test_annotate_addresses(
 }
 
 @_cdecl("mail_compose_session_handler_test_can_send_message")
-func mail_compose_session_handler_test_can_send_message(
+public func mail_compose_session_handler_test_can_send_message(
     _ handler: UnsafeMutableRawPointer?,
     _ session: UnsafeMutableRawPointer?,
     _ errorOut: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
@@ -489,7 +489,7 @@ func mail_compose_session_handler_test_can_send_message(
 }
 
 @_cdecl("mail_compose_session_handler_test_additional_headers")
-func mail_compose_session_handler_test_additional_headers(
+public func mail_compose_session_handler_test_additional_headers(
     _ handler: UnsafeMutableRawPointer?,
     _ session: UnsafeMutableRawPointer?,
     _ errorOut: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
@@ -508,7 +508,7 @@ func mail_compose_session_handler_test_additional_headers(
 }
 
 @_cdecl("mail_compose_session_handler_annotate_addresses_async")
-func mail_compose_session_handler_annotate_addresses_async(
+public func mail_compose_session_handler_annotate_addresses_async(
     _ handler: UnsafeMutableRawPointer?,
     _ session: UnsafeMutableRawPointer?,
     _ cb: @escaping @convention(c) (UnsafeRawPointer?, UnsafePointer<CChar>?, UnsafeMutableRawPointer) -> Void,
@@ -535,7 +535,7 @@ func mail_compose_session_handler_annotate_addresses_async(
 }
 
 @_cdecl("mail_compose_session_handler_allow_message_send_async")
-func mail_compose_session_handler_allow_message_send_async(
+public func mail_compose_session_handler_allow_message_send_async(
     _ handler: UnsafeMutableRawPointer?,
     _ session: UnsafeMutableRawPointer?,
     _ cb: @escaping @convention(c) (UnsafeRawPointer?, UnsafePointer<CChar>?, UnsafeMutableRawPointer) -> Void,

@@ -2,7 +2,7 @@ import Foundation
 import MailKit
 
 @_cdecl("mail_decoded_message_banner_new")
-func mail_decoded_message_banner_new(
+public func mail_decoded_message_banner_new(
     _ title: UnsafePointer<CChar>?,
     _ primaryActionTitle: UnsafePointer<CChar>?,
     _ dismissable: Bool,
@@ -24,7 +24,7 @@ func mail_decoded_message_banner_new(
 }
 
 @_cdecl("mail_decoded_message_new")
-func mail_decoded_message_new(
+public func mail_decoded_message_new(
     _ rawDataBytes: UnsafePointer<UInt8>?,
     _ rawDataLen: Int,
     _ hasRawData: Bool,

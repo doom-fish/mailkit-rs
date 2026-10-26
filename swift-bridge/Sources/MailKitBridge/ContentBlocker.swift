@@ -1,7 +1,7 @@
 import Foundation
 import MailKit
 
-typealias MailContentBlockerJSONCallback = @convention(c) (
+public typealias MailContentBlockerJSONCallback = @convention(c) (
     UnsafeMutableRawPointer?,
     UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
 ) -> UnsafeMutableRawPointer?
@@ -43,7 +43,7 @@ final class RustContentBlocker: NSObject, MEContentBlocker {
 }
 
 @_cdecl("mail_content_blocker_new")
-func mail_content_blocker_new(
+public func mail_content_blocker_new(
     _ contentRulesCallback: MailContentBlockerJSONCallback?,
     _ releaseCallback: MailReleaseUserDataCallback?,
     _ userData: UnsafeMutableRawPointer?,
@@ -65,7 +65,7 @@ func mail_content_blocker_new(
 }
 
 @_cdecl("mail_content_blocker_test_content_rules_json")
-func mail_content_blocker_test_content_rules_json(
+public func mail_content_blocker_test_content_rules_json(
     _ blocker: UnsafeMutableRawPointer?,
     _ errorOut: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
 ) -> UnsafeMutableRawPointer? {

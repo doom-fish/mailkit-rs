@@ -1,12 +1,12 @@
 import MailKit
 
-typealias MailMessageActionDecisionCallback = @convention(c) (
+public typealias MailMessageActionDecisionCallback = @convention(c) (
     UnsafeMutableRawPointer?,
     UnsafeMutableRawPointer?,
     UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
 ) -> UnsafeMutableRawPointer?
 
-typealias MailMessageActionHeadersCallback = @convention(c) (
+public typealias MailMessageActionHeadersCallback = @convention(c) (
     UnsafeMutableRawPointer?,
     UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
 ) -> UnsafeMutableRawPointer?
@@ -83,7 +83,7 @@ final class RustMessageActionHandler: NSObject, MEMessageActionHandler {
 }
 
 @_cdecl("mail_message_action_extension_new")
-func mail_message_action_extension_new(
+public func mail_message_action_extension_new(
     _ decideCallback: MailMessageActionDecisionCallback?,
     _ requiredHeadersCallback: MailMessageActionHeadersCallback?,
     _ releaseCallback: MailReleaseUserDataCallback?,
@@ -107,7 +107,7 @@ func mail_message_action_extension_new(
 }
 
 @_cdecl("mail_message_action_extension_test_decide_action")
-func mail_message_action_extension_test_decide_action(
+public func mail_message_action_extension_test_decide_action(
     _ handler: UnsafeMutableRawPointer?,
     _ messageBox: UnsafeMutableRawPointer?,
     _ errorOut: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
@@ -130,7 +130,7 @@ func mail_message_action_extension_test_decide_action(
 }
 
 @_cdecl("mail_message_action_extension_test_required_headers")
-func mail_message_action_extension_test_required_headers(
+public func mail_message_action_extension_test_required_headers(
     _ handler: UnsafeMutableRawPointer?,
     _ errorOut: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
 ) -> UnsafeMutableRawPointer? {

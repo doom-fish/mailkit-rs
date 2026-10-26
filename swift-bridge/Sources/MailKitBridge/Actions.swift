@@ -1,32 +1,32 @@
 import MailKit
 
 @_cdecl("mail_message_action_move_to_trash")
-func mail_message_action_move_to_trash() -> UnsafeMutableRawPointer? {
+public func mail_message_action_move_to_trash() -> UnsafeMutableRawPointer? {
     mailRetainedPointer(MEMessageAction.moveToTrash)
 }
 
 @_cdecl("mail_message_action_move_to_archive")
-func mail_message_action_move_to_archive() -> UnsafeMutableRawPointer? {
+public func mail_message_action_move_to_archive() -> UnsafeMutableRawPointer? {
     mailRetainedPointer(MEMessageAction.moveToArchive)
 }
 
 @_cdecl("mail_message_action_move_to_junk")
-func mail_message_action_move_to_junk() -> UnsafeMutableRawPointer? {
+public func mail_message_action_move_to_junk() -> UnsafeMutableRawPointer? {
     mailRetainedPointer(MEMessageAction.moveToJunk)
 }
 
 @_cdecl("mail_message_action_mark_as_read")
-func mail_message_action_mark_as_read() -> UnsafeMutableRawPointer? {
+public func mail_message_action_mark_as_read() -> UnsafeMutableRawPointer? {
     mailRetainedPointer(MEMessageAction.markAsRead)
 }
 
 @_cdecl("mail_message_action_mark_as_unread")
-func mail_message_action_mark_as_unread() -> UnsafeMutableRawPointer? {
+public func mail_message_action_mark_as_unread() -> UnsafeMutableRawPointer? {
     mailRetainedPointer(MEMessageAction.markAsUnread)
 }
 
 @_cdecl("mail_message_action_flag")
-func mail_message_action_flag(_ flag: Int32) -> UnsafeMutableRawPointer? {
+public func mail_message_action_flag(_ flag: Int32) -> UnsafeMutableRawPointer? {
     guard let flag = MEMessageAction.Flag(rawValue: Int(flag)) else {
         return nil
     }
@@ -34,7 +34,7 @@ func mail_message_action_flag(_ flag: Int32) -> UnsafeMutableRawPointer? {
 }
 
 @_cdecl("mail_message_action_set_background_color")
-func mail_message_action_set_background_color(_ color: Int32) -> UnsafeMutableRawPointer? {
+public func mail_message_action_set_background_color(_ color: Int32) -> UnsafeMutableRawPointer? {
     guard let color = MEMessageAction.MessageColor(rawValue: Int(color)) else {
         return nil
     }
@@ -42,12 +42,12 @@ func mail_message_action_set_background_color(_ color: Int32) -> UnsafeMutableRa
 }
 
 @_cdecl("mail_message_action_decision_invoke_again_with_body")
-func mail_message_action_decision_invoke_again_with_body() -> UnsafeMutableRawPointer? {
+public func mail_message_action_decision_invoke_again_with_body() -> UnsafeMutableRawPointer? {
     mailRetainedPointer(MEMessageActionDecision.invokeAgainWithBody)
 }
 
 @_cdecl("mail_message_action_decision_action")
-func mail_message_action_decision_action(
+public func mail_message_action_decision_action(
     _ action: UnsafeMutableRawPointer?
 ) -> UnsafeMutableRawPointer? {
     guard let action = mailTakeObject(action, as: MEMessageAction.self) else {
@@ -57,7 +57,7 @@ func mail_message_action_decision_action(
 }
 
 @_cdecl("mail_message_action_decision_actions")
-func mail_message_action_decision_actions(
+public func mail_message_action_decision_actions(
     _ actions: UnsafePointer<UnsafeMutableRawPointer?>?,
     _ actionCount: Int
 ) -> UnsafeMutableRawPointer? {

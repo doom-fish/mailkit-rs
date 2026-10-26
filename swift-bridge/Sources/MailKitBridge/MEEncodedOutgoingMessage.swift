@@ -2,7 +2,7 @@ import Foundation
 import MailKit
 
 @_cdecl("mail_encoded_outgoing_message_new")
-func mail_encoded_outgoing_message_new(
+public func mail_encoded_outgoing_message_new(
     _ rawDataBytes: UnsafePointer<UInt8>?,
     _ rawDataLen: Int,
     _ isSigned: Bool,
@@ -35,7 +35,7 @@ func mail_encoded_outgoing_message_new(
 }
 
 @_cdecl("mail_outgoing_message_encoding_status_new")
-func mail_outgoing_message_encoding_status_new(
+public func mail_outgoing_message_encoding_status_new(
     _ canSign: Bool,
     _ canEncrypt: Bool,
     _ securityErrorJSON: UnsafePointer<CChar>?,
@@ -81,7 +81,7 @@ func mail_outgoing_message_encoding_status_new(
 }
 
 @_cdecl("mail_message_encoding_result_new")
-func mail_message_encoding_result_new(
+public func mail_message_encoding_result_new(
     _ encodedMessage: UnsafeMutableRawPointer?,
     _ signingErrorJSON: UnsafePointer<CChar>?,
     _ encryptionErrorJSON: UnsafePointer<CChar>?,

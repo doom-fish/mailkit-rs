@@ -16,21 +16,21 @@ func mailSnapshot(_ signer: MEMessageSigner) -> MailMessageSignerSnapshot {
     )
 }
 
-typealias MailMessageSecurityDecodeCallback = @convention(c) (
+public typealias MailMessageSecurityDecodeCallback = @convention(c) (
     UnsafePointer<UInt8>?,
     Int,
     UnsafeMutableRawPointer?,
     UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
 ) -> UnsafeMutableRawPointer?
 
-typealias MailMessageSecurityEncodeCallback = @convention(c) (
+public typealias MailMessageSecurityEncodeCallback = @convention(c) (
     UnsafeMutableRawPointer?,
     UnsafeMutableRawPointer?,
     UnsafeMutableRawPointer?,
     UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
 ) -> UnsafeMutableRawPointer?
 
-typealias MailMessageSecurityControllerCallback = @convention(c) (
+public typealias MailMessageSecurityControllerCallback = @convention(c) (
     UnsafeMutableRawPointer?,
     UnsafeMutableRawPointer?,
     UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
@@ -339,7 +339,7 @@ final class RustMessageSecurityHandler: NSObject, MEMessageSecurityHandler {
 }
 
 @_cdecl("mail_message_security_handler_new")
-func mail_message_security_handler_new(
+public func mail_message_security_handler_new(
     _ decodeCallback: MailMessageSecurityDecodeCallback?,
     _ encodingStatusCallback: MailMessageSecurityEncodeCallback?,
     _ encodeMessageCallback: MailMessageSecurityEncodeCallback?,
@@ -375,7 +375,7 @@ func mail_message_security_handler_new(
 }
 
 @_cdecl("mail_message_security_handler_test_decode_message")
-func mail_message_security_handler_test_decode_message(
+public func mail_message_security_handler_test_decode_message(
     _ handler: UnsafeMutableRawPointer?,
     _ bytes: UnsafePointer<UInt8>?,
     _ count: Int,
@@ -413,7 +413,7 @@ func mailSecuritySnapshots(
 }
 
 @_cdecl("mail_message_security_handler_test_encoding_status")
-func mail_message_security_handler_test_encoding_status(
+public func mail_message_security_handler_test_encoding_status(
     _ handler: UnsafeMutableRawPointer?,
     _ messageBox: UnsafeMutableRawPointer?,
     _ contextBox: UnsafeMutableRawPointer?,
@@ -432,7 +432,7 @@ func mail_message_security_handler_test_encoding_status(
 }
 
 @_cdecl("mail_message_security_handler_test_encode_message")
-func mail_message_security_handler_test_encode_message(
+public func mail_message_security_handler_test_encode_message(
     _ handler: UnsafeMutableRawPointer?,
     _ messageBox: UnsafeMutableRawPointer?,
     _ contextBox: UnsafeMutableRawPointer?,
@@ -451,7 +451,7 @@ func mail_message_security_handler_test_encode_message(
 }
 
 @_cdecl("mail_message_security_handler_test_view_controller_for_signers")
-func mail_message_security_handler_test_view_controller_for_signers(
+public func mail_message_security_handler_test_view_controller_for_signers(
     _ handler: UnsafeMutableRawPointer?,
     _ signersBox: UnsafeMutableRawPointer?,
     _ errorOut: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
@@ -475,7 +475,7 @@ func mail_message_security_handler_test_view_controller_for_signers(
 }
 
 @_cdecl("mail_message_security_handler_test_view_controller_for_message_context")
-func mail_message_security_handler_test_view_controller_for_message_context(
+public func mail_message_security_handler_test_view_controller_for_message_context(
     _ handler: UnsafeMutableRawPointer?,
     _ contextBox: UnsafeMutableRawPointer?,
     _ errorOut: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
@@ -499,7 +499,7 @@ func mail_message_security_handler_test_view_controller_for_message_context(
 }
 
 @_cdecl("mail_message_security_handler_test_primary_action_clicked")
-func mail_message_security_handler_test_primary_action_clicked(
+public func mail_message_security_handler_test_primary_action_clicked(
     _ handler: UnsafeMutableRawPointer?,
     _ contextBox: UnsafeMutableRawPointer?,
     _ errorOut: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
@@ -523,7 +523,7 @@ func mail_message_security_handler_test_primary_action_clicked(
 }
 
 @_cdecl("mail_message_security_handler_encoding_status_async")
-func mail_message_security_handler_encoding_status_async(
+public func mail_message_security_handler_encoding_status_async(
     _ handler: UnsafeMutableRawPointer?,
     _ messageBox: UnsafeMutableRawPointer?,
     _ contextBox: UnsafeMutableRawPointer?,
@@ -544,7 +544,7 @@ func mail_message_security_handler_encoding_status_async(
 }
 
 @_cdecl("mail_message_security_handler_encode_message_async")
-func mail_message_security_handler_encode_message_async(
+public func mail_message_security_handler_encode_message_async(
     _ handler: UnsafeMutableRawPointer?,
     _ messageBox: UnsafeMutableRawPointer?,
     _ contextBox: UnsafeMutableRawPointer?,
@@ -565,7 +565,7 @@ func mail_message_security_handler_encode_message_async(
 }
 
 @_cdecl("mail_message_security_handler_primary_action_clicked_async")
-func mail_message_security_handler_primary_action_clicked_async(
+public func mail_message_security_handler_primary_action_clicked_async(
     _ handler: UnsafeMutableRawPointer?,
     _ contextBox: UnsafeMutableRawPointer?,
     _ cb: @escaping @convention(c) (UnsafeRawPointer?, UnsafePointer<CChar>?, UnsafeMutableRawPointer) -> Void,
